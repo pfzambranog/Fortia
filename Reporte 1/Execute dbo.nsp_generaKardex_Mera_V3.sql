@@ -21,6 +21,7 @@ As
 Declare
    @concatenaFaltas   Varchar(Max),
    @w_sql             Varchar(Max),
+   @w_sql2            Varchar(Max),
    @w_lang            Varchar(100),
    @w_chmes           Varchar( 20),
    @w_claveFalta      Varchar(  5),
@@ -47,7 +48,6 @@ Begin
 
    Select  @concatenaFaltas = '',
            @w_x             = 0,
-           @w_y             = 31,
            @w_mesIni        = Case When @PnMes = 0
                                    Then @PnMes
                                    Else @PnMes -1
@@ -63,7 +63,11 @@ Begin
                                           Case When  @PnMes = 0
                                                Then  '01'
                                                Else  Format (@PnMes, '00')
-                                          End, '-01') as date)
+                                          End, '-01') as date),
+           @w_y             = Case When @PnMes = 0
+                                   Then 31
+                                   Else DatePart(dd, Eomonth(@w_fecha))
+                              End;
 
 --
 -- Creación de Tablas Temporales
@@ -93,6 +97,14 @@ Begin
 -- Inicio de Proceso
 --
 
+   Select @concatenaFaltas = Concat(coalesce(@concatenaFaltas,''), RTrim(CLA_FALTA),
+             ': ' + NOM_FALTA + CHAR(9))
+   From   dbo.RH_FALTA
+   Where  CLA_EMPRESA = @idempresa;
+   Set @concatenaFaltas = @concatenaFaltas + 'V: V, Vacaciones'
+
+--
+   
    Set @w_lang = @@LANGUAGE
 
    Set language spanish
@@ -110,6 +122,11 @@ Begin
 
    End
 
+   Set @w_sql2 = Concat('Select IdEmpresa,   IdTrabajador, IdMes,        Nombremes, ',
+                               'Nomrazosoci, Nombre,       Foto,         Fechaalta, ',
+                               'Fechabaja,   Nomdepto,     NomUbicacion, Nompuesto, ',
+                               'Turno,       Tipo,         Clase, ');
+
    Set language @w_lang
 
    While @w_x < @w_y
@@ -120,17 +137,14 @@ Begin
                           ' Varchar(8) Not null Default Char(32) ')
       Execute (@w_sql)
 
-
+      Set @w_sql2 = Concat(@w_sql2, 'dia_', Format(@w_x,  '00'), ' "', @w_x, '", ')
    End
 
---
-
-   Select @concatenaFaltas = Concat(coalesce(@concatenaFaltas,''), RTrim(CLA_FALTA),
-             ': ' + NOM_FALTA + CHAR(9))
-   From   dbo.RH_FALTA
-   Where  CLA_EMPRESA = @idempresa;
-
-   Set @concatenaFaltas = @concatenaFaltas + 'V: V, Vacaciones'
+   Set @w_sql2 = Concat(@w_sql2, 'Getdate()    FechaEmision, ',
+                        'Concat(', @w_comilla, 'Kardex Anual', @w_comilla, ', ', @idanio, ') TituloKar, ',
+                        @w_comilla, @concatenaFaltas, @w_comilla, ' detfal, ',
+                        'Supervisor ',
+                        'From #AsisteciaTbl');
 
 --
 
@@ -147,7 +161,7 @@ Begin
           concat(rp.cla_puesto, ', ', rp.nom_puesto),
           concat(rt.cla_roll,   ', ', rpt.nom_perfil_turno),
           rt.cla_roll,  rt.cla_clasificacion,
-          dbo.obtieneSupervisor(rt.cla_empresa, rt.cla_trab),
+          Isnull(dbo.obtieneSupervisor(rt.cla_empresa, rt.cla_trab), Char(32)),
           concat(cla_ubicacion, ', ', ru.nom_ubicacion)
    From   dbo.RH_TRAB         rt
    Join   dbo.RH_RAZON_SOCIAL rrs
@@ -191,6 +205,7 @@ Begin
             Break
          End
 
+
       Set @w_x = 0
       While @w_x < @w_y
       Begin
@@ -211,22 +226,8 @@ Begin
 
    End
 
-   Select IdEmpresa,   IdTrabajador, IdMes,        Nombremes,
-          Nomrazosoci, Nombre,       Foto,         Fechaalta,
-          Fechabaja,   Nomdepto,     NomUbicacion, Nompuesto,   Turno,
-          Tipo,        Clase,        dia_01 "1",   dia_02 "2",
-          dia_03 "3",  dia_04  "4",  dia_05 "5",   dia_06 "6",
-          dia_07 "7",  dia_08  "8",  dia_09 "9",   dia_10 "10",
-          dia_11 "11", dia_12  "12", dia_13 "13",  dia_14 "14",
-          dia_15 "15", dia_16  "16", dia_17 "17",  dia_18 "18",
-          dia_19 "19", dia_20  "20", dia_21 "21",  dia_22 "22",
-          dia_23 "23", dia_24  "24", dia_25 "25",  dia_26 "26",
-          dia_27 "27", dia_28  "28", dia_29 "29",  dia_30 "30",
-          dia_31 "31", Getdate()    FechaEmision,
-          Concat('Kardex Anual ', @idanio) TituloKar,
-          @concatenaFaltas detfal,
-          Supervisor
-   From #AsisteciaTbl
+   Execute (@w_sql2)
+
 
    Return
 End
