@@ -70,10 +70,19 @@ Begin
                               End;
 
 --
--- Creación de Tablas Temporales
+-- Creación de Tablas de trabajo
 --
 
-  Create Table #AsisteciaTbl
+  If Exists ( Select Top 1 1
+              From   SysObjects
+              Where  Uid = 1
+              And    Type = 'U'
+              And    Name = 'Asistencia')
+     Begin
+        Drop Table dbo.Asistencia
+     End
+
+  Create Table dbo.Asistencia
  (idSecuencia     Integer       Not null Identity (1, 1) Primary Key,
   IdEmpresa       Integer       Not Null,
   IdTrabajador    Integer       Not Null,
@@ -133,7 +142,7 @@ Begin
    Begin
       Set @w_x    += 1
 
-      Set @w_sql = Concat('Alter Table #AsisteciaTbl  Add dia_', Format(@w_x, '00'),
+      Set @w_sql = Concat('Alter Table dbo.Asistencia  Add dia_', Format(@w_x, '00'),
                           ' Varchar(8) Not null Default Char(32) ')
       Execute (@w_sql)
 
@@ -144,11 +153,11 @@ Begin
                         'Concat(', @w_comilla, 'Kardex Anual', @w_comilla, ', ', @idanio, ') TituloKar, ',
                         @w_comilla, @concatenaFaltas, @w_comilla, ' detfal, ',
                         'Supervisor ',
-                        'From #AsisteciaTbl');
+                        'From dbo.Asistencia');
 
 --
 
-   Insert Into #AsisteciaTbl
+   Insert Into dbo.Asistencia
   (Idempresa,   Idtrabajador, IdMes,      Nombremes,
    Nomrazosoci, Nombre,       Foto,       Fechaalta,
    Fechabaja,   Nomdepto,     Nompuesto,  Turno,
@@ -198,7 +207,7 @@ Begin
       Select @w_idEmpresa    = Idempresa,
              @w_Idtrabajador = Idtrabajador,
              @w_IdMes        = idMes
-      From   #AsisteciaTbl
+      From   dbo.Asistencia
       Where  idSecuencia = @w_secuencia;
       If @@Rowcount = 0
          Begin
@@ -217,7 +226,7 @@ Begin
             Begin
                Set @w_sql = Concat('Update a ',
                                    'Set    dia_', Format(@w_x, '00'), ' = ', @w_comilla , @w_claveFalta, @w_comilla,
-                                   'From   #AsisteciaTbl a ',
+                                   'From   dbo.Asistencia a ',
                                    'Where  a.idSecuencia = ', @w_secuencia)
                Execute (@w_sql)
            End
@@ -226,9 +235,100 @@ Begin
 
    End
 
-   Execute (@w_sql2)
+   If @w_y = 28
+      Begin
+         Select IdEmpresa,    IdTrabajador, IdMes,        Nombremes,
+                Nomrazosoci,  Nombre,       Foto,         Fechaalta,
+                Fechabaja,    Nomdepto,     NomUbicacion, Nompuesto,
+                Turno,        Tipo,         Clase,
+                dia_01  "01", dia_02  "02", dia_03  "03", dia_04  "04",
+                dia_05  "05", dia_06  "06", dia_07  "07", dia_08  "08",
+                dia_09  "09", dia_10  "10", dia_11  "11", dia_12  "12",
+                dia_13  "13", dia_14  "14", dia_15  "15", dia_16  "16",
+                dia_17  "17", dia_18  "18", dia_19  "19", dia_20  "20",
+                dia_21  "21", dia_22  "22", dia_23  "23", dia_20  "24",
+                dia_25  "25", dia_25  "26", dia_26  "27", dia_28  "28",
+                Getdate()    FechaEmision, 
+                Concat('Kardex Anual', @idanio, 'TituloKar ',
+                        @concatenaFaltas) detfal,
+                        Supervisor
+         From dbo.Asistencia;
 
+         Goto Salida
 
+      End
+
+   If @w_y = 29
+      Begin
+         Select IdEmpresa,    IdTrabajador, IdMes,        Nombremes,
+                Nomrazosoci,  Nombre,       Foto,         Fechaalta,
+                Fechabaja,    Nomdepto,     NomUbicacion, Nompuesto,
+                Turno,        Tipo,         Clase,
+                dia_01  "01", dia_02  "02", dia_03  "03", dia_04  "04",
+                dia_05  "05", dia_06  "06", dia_07  "07", dia_08  "08",
+                dia_09  "09", dia_10  "10", dia_11  "11", dia_12  "12",
+                dia_13  "13", dia_14  "14", dia_15  "15", dia_16  "16",
+                dia_17  "17", dia_18  "18", dia_19  "19", dia_20  "20",
+                dia_21  "21", dia_22  "22", dia_23  "23", dia_20  "24",
+                dia_25  "25", dia_25  "26", dia_26  "27", dia_28  "28",
+                dia_29  "29", Getdate()    FechaEmision, 
+                Concat('Kardex Anual', @idanio, 'TituloKar ',
+                        @concatenaFaltas) detfal,
+                        Supervisor
+         From dbo.Asistencia;
+
+         Goto Salida
+
+      End
+
+   If @w_y = 30
+      Begin
+         Select IdEmpresa,    IdTrabajador, IdMes,        Nombremes,
+                Nomrazosoci,  Nombre,       Foto,         Fechaalta,
+                Fechabaja,    Nomdepto,     NomUbicacion, Nompuesto,
+                Turno,        Tipo,         Clase,
+                dia_01  "01", dia_02  "02", dia_03  "03", dia_04  "04",
+                dia_05  "05", dia_06  "06", dia_07  "07", dia_08  "08",
+                dia_09  "09", dia_10  "10", dia_11  "11", dia_12  "12",
+                dia_13  "13", dia_14  "14", dia_15  "15", dia_16  "16",
+                dia_17  "17", dia_18  "18", dia_19  "19", dia_20  "20",
+                dia_21  "21", dia_22  "22", dia_23  "23", dia_20  "24",
+                dia_25  "25", dia_25  "26", dia_26  "27", dia_28  "28",
+                dia_29  "29", dia_30  "30", Getdate()    FechaEmision, 
+                Concat('Kardex Anual', @idanio, 'TituloKar ',
+                        @concatenaFaltas) detfal,
+                        Supervisor
+         From dbo.Asistencia;
+
+         Goto Salida
+
+      End
+
+   If @w_y = 31
+      Begin
+         Select IdEmpresa,    IdTrabajador, IdMes,        Nombremes,
+                Nomrazosoci,  Nombre,       Foto,         Fechaalta,
+                Fechabaja,    Nomdepto,     NomUbicacion, Nompuesto,
+                Turno,        Tipo,         Clase,
+                dia_01  "01", dia_02  "02", dia_03  "03", dia_04  "04",
+                dia_05  "05", dia_06  "06", dia_07  "07", dia_08  "08",
+                dia_09  "09", dia_10  "10", dia_11  "11", dia_12  "12",
+                dia_13  "13", dia_14  "14", dia_15  "15", dia_16  "16",
+                dia_17  "17", dia_18  "18", dia_19  "19", dia_20  "20",
+                dia_21  "21", dia_22  "22", dia_23  "23", dia_20  "24",
+                dia_25  "25", dia_25  "26", dia_26  "27", dia_28  "28",
+                dia_29  "29", dia_30  "30", dia_31  "31", Getdate()    FechaEmision, 
+                Concat('Kardex Anual', @idanio, 'TituloKar ',
+                        @concatenaFaltas) detfal,
+                        Supervisor
+         From dbo.Asistencia;
+
+         Goto Salida
+
+      End
+
+Salida:
+   Set Xact_Abort    Off   
    Return
 End
 Go
