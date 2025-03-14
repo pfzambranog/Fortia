@@ -1,21 +1,26 @@
  --Declare
- --  @Empresa            Integer = Null,
- --  @RAZON_SOCIAL       Integer = Null,
- --  @UBICACION          Integer = Null,
- --  @Periodo            Integer = Null,
- --  @Status             Char(1) = Null,
- --  @PnIdDepartamento   Integer = Null,
- --  @idtrabajador       Integer = Null,
- --  @nUsuario           Integer = 1;
+ --  @PsRazon_Social           Varchar(Max) = '',
+ --  @PsCla_Empresa            Varchar(Max) = '1',
+ --  @PsCla_Ubicacion          Varchar(Max) = '3,1,21',
+ --  @PsCla_CentroCosto        Varchar(Max) = '',
+ --  @PsCla_Periodo            Varchar(Max) = '',
+ --  @PsEstatus_Trab           Varchar(Max) = 'A',
+ --  @PsCla_Depto              Varchar(Max) = '',
+ --  @PsCla_RegImss            Varchar(Max) = '',
+ --  @PsCla_Trab               Varchar(Max) = '',
+ --  @PsCla_Puestos            Varchar(MAx) = '15, 1, 13',
+ --  @nUsuario                 Integer      = 1;
 
- -- Execute dbo.RPT_MAESTRO_EMPLEADOS_RHPAY_V2 @Empresa          = @Empresa,
- --                                            @RAZON_SOCIAL     = @RAZON_SOCIAL,
-    --                                         @UBICACION        = @UBicacion,
-    --                                         @Periodo          = @Periodo,
-    --                                         @STATUS           = @Status,
-    --                                         @PnIdDepartamento = @PnIdDepartamento,
-    --                                         @idtrabajador     = @idtrabajador,
-    --                                         @nUsuario         = @nUsuario;
+ -- Execute dbo.RPT_MAESTRO_EMPLEADOS_RHPAY_V2 @PsRazon_Social    = @PsRazon_Social,
+ --                                            @PsCla_Ubicacion   = @PsCla_Ubicacion,
+ --                                            @PsCla_CentroCosto = @PsCla_CentroCosto,
+ --                                            @PsCla_Periodo     = @PsCla_Periodo,
+ --                                            @PsCla_RegImss     = @PsCla_RegImss,
+ --                                            @PsEstatus_Trab    = @PsEstatus_Trab,
+ --                                            @PsCla_Depto       = @PsCla_Depto,
+ --                                            @PsCla_Trab        = @PsCla_Trab,
+ --                                            @PsCla_Puestos     = @PsCla_Puestos,
+ --                                            @nUsuario          = @nUsuario;
 
 /********************************************************************************************
     JM
@@ -27,28 +32,35 @@
     Progrador: Pedro Zambrano.
     Motivo Act: Minuta Arriva - Minuta de cambio - Maestro Empleados
 
+
 ********************************************************************************************/
+
 Create Or Alter Procedure RPT_MAESTRO_EMPLEADOS_RHPAY_V2
- (@Empresa            Integer = Null,
-  @RAZON_SOCIAL       Integer = Null,
-  @UBICACION          Integer = Null,
-  @Periodo            Integer = Null,
-  @STATUS             Char(1) = Null,
-  @PnIdDepartamento   Integer = Null,
-  @idtrabajador       Integer = Null,
-  @nUsuario           Integer)
+  (@PsRazon_Social           Varchar(Max)   = '',
+   @PsCla_Empresa            Varchar(Max)   = '',
+   @PsCla_Ubicacion          Varchar(Max)   = '',
+   @PsCla_CentroCosto        Varchar(Max)   = '',
+   @PsCla_Periodo            Varchar(Max)   = '',
+   @PsCla_Depto              Varchar(Max)   = '',
+   @PsEstatus_Trab           Varchar(Max)   = '',
+   @PsCla_RegImss            Varchar(Max)   = '',
+   @PsCla_Trab               Varchar(Max)   = '',
+   @PsCla_Puestos            Varchar(Max)   = '',
+   @nUsuario                 Integer)
 As
 
 Declare
-  @FIN_ANIO_ANTERIOR  Date,
-  @FIN_ANIO_ACTUAL    Date,
-  @INI_ANIO_ACTUAL    Date,
-  @INI_ANIO_ANTERIOR  Date,
+  @FIN_ANIO_ANTERIOR         Date,
+  @FIN_ANIO_ACTUAL           Date,
+  @INI_ANIO_ACTUAL           Date,
+  @INI_ANIO_ANTERIOR         Date,
 --
-  @w_anioMesIni       Char(4),
-  @w_anioMesFin       Char(4),
-  @w_fecha            Date,
-  @w_fechaProc        Datetime;
+  @PnError                   Integer,
+  @PsMensaje                 Varchar(250),
+  @w_anioMesIni              Char(4),
+  @w_anioMesFin              Char(4),
+  @w_fecha                   Date,
+  @w_fechaProc               Datetime;
 
 Begin
    Set Nocount       On
@@ -65,7 +77,471 @@ Begin
           @FIN_ANIO_ACTUAL   = Convert(Date, Str(Year(@w_fecha)) + @w_anioMesFin);
 
 --
--- Inicio de Consulta.
+-- Generación de Tablas Temporales.
+--
+
+-- Razón Social.
+
+   Create Table #TempRazon_Social
+  (CLA_RAZON_SOCIAL  Integer      Not Null,
+   NOM_RAZON_SOCIAL  Varchar(300) Not Null,
+   CLA_EMPRESA       Integer      Not Null,
+   Constraint TempRazon_SocialPk
+   Primary Key (CLA_RAZON_SOCIAL, CLA_EMPRESA));
+
+-- Razón Empresa.
+
+   Create Table #TempEmpresa
+  (CLA_RAZON_SOCIAL  Integer      Not Null,
+   CLA_EMPRESA       Integer Not Null,
+   Constraint TempEmpresaPk
+   Primary Key (CLA_EMPRESA, CLA_RAZON_SOCIAL));
+
+-- Tabla Temporal de Ubicación.
+
+   Create Table #tmpUbicacion
+  (CLA_EMPRESA         Integer      Not Null,
+   CLA_UBICACION       Integer      Not Null,
+   NOM_UBICACION       Varchar(100) Not Null,
+   Constraint tmpUbicacionPk
+   Primary Key (CLA_EMPRESA, CLA_UBICACION));
+
+--
+-- Tabla Temporal de Centro de Costo.
+--
+
+   Create Table #tmpCentroCosto
+  (CLA_EMPRESA         Integer      Not Null,
+   CLA_CENTRO_COSTO    Integer      Not Null,
+   NOM_CENTRO_COSTO    Varchar(100) Not Null,
+   Constraint tmpCCPk
+   Primary Key (CLA_EMPRESA, CLA_CENTRO_COSTO));
+
+--
+-- Tabla Temporal de Departamento.
+--
+
+   Create Table #tmpDepto
+  (CLA_EMPRESA Integer       Not Null,
+   CLA_DEPTO   Integer       Not Null,
+   NOM_DEPTO   Varchar(100)  Not Null,
+   CLA_AREA    Integer           Null,
+   NOM_AREA    Varchar(100)      Null,
+   Index tmpDeptoidx(CLA_EMPRESA, CLA_DEPTO));
+
+--
+-- Tabla Temporal de Períodos.
+--
+
+   Create Table #tempPeriodo
+  (CLA_EMPRESA  Integer       Not Null,
+   CLA_PERIODO  Integer       Not Null,
+   NOM_PERIODO  Varchar(100)  Not Null,
+   Constraint tempPeriodoPk
+   Primary Key (CLA_EMPRESA, CLA_PERIODO));
+
+--
+-- Tabla Temporal de Regimen IMSS.
+--
+
+   Create Table #tmpRegImss
+  (CLA_EMPRESA      Integer      Not Null,
+   CLA_REG_IMSS     Integer      Not Null,
+   NUM_REG_IMSS     Varchar( 20) Not Null,
+   NOM_REG_IMSS     Varchar(100) Not Null,
+   Constraint tmpRegImssPk
+   Primary Key (CLA_EMPRESA, NUM_REG_IMSS));
+
+--
+-- Tabla Temporal de Trabajadores.
+--
+
+   Create Table #TempTrabajador
+  (CLA_EMPRESA      Integer      Not Null,
+   CLA_TRAB         Integer      Not Null,
+   Constraint TempTrabajadorPk
+   Primary Key (CLA_EMPRESA, CLA_TRAB));
+
+--
+-- Tabla Temporal de Puestos.
+--
+
+   Create Table #tmpPuesto
+  (CLA_EMPRESA Integer       Not Null,
+   CLA_PUESTO  Integer       Not Null,
+   NOM_PUESTO  Varchar(250)  Not Null,
+   Constraint tmpPuestoPk
+   Primary Key (CLA_EMPRESA, CLA_PUESTO));
+
+--
+-- Tabla Temporal de Estatus Trabajador.
+--
+
+   Create Table #TmpEstatusTrab
+  (idEstatus    Varchar(2) Not Null Primary Key);
+
+--
+-- Inicio de Proceso.
+--
+
+--
+-- Filtro para Consulta de Razon Social.
+--
+
+   If Isnull(@PsRazon_Social, '') = ''
+      Begin
+         Insert Into #TempRazon_Social
+        (CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA)
+         Select CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA
+         From   dbo.rh_razon_social;
+      End
+   Else
+      Begin
+         Insert Into #TempRazon_Social
+        (CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA)
+         Select Distinct b.CLA_RAZON_SOCIAL, b.NOM_RAZON_SOCIAL, b.CLA_EMPRESA
+         From   String_split(@PsRazon_Social, ',') a
+         Join   dbo.rh_razon_social                  b
+         On     b.CLA_RAZON_SOCIAL= a.value;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 1,
+                      @PsMensaje = 'La Lista de Razon social Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
+
+--
+-- Filtro para Consulta de Empresas
+--
+
+   If Isnull(@PsCla_Empresa, '') = ''
+      Begin
+         Insert Into #TempEmpresa
+        (CLA_RAZON_SOCIAL, CLA_EMPRESA)
+         Select Distinct a.CLA_RAZON_SOCIAL, a.CLA_EMPRESA
+         From   dbo.rh_razon_social a 
+         Join   #TempRazon_Social   b 
+         On     b.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
+         And    b.CLA_EMPRESA      = a.CLA_EMPRESA;
+      End
+   Else
+      Begin
+         Insert Into #TempEmpresa
+        (CLA_RAZON_SOCIAL, CLA_EMPRESA)
+         Select Distinct b.CLA_RAZON_SOCIAL, b.CLA_EMPRESA
+         From   String_split(@PsCla_Empresa, ',') a
+         Join   dbo.rh_razon_social               b
+         On     b.CLA_EMPRESA = a.value 
+         Join   #TempRazon_Social   c 
+         On     c.CLA_RAZON_SOCIAL = b.CLA_RAZON_SOCIAL
+         And    c.CLA_EMPRESA      = b.CLA_EMPRESA;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 2,
+                      @PsMensaje = 'La Lista de Empresas Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
+
+--
+-- Filtro para Consulta de Estatus de Trabajador
+--
+
+   If Isnull(@PsEstatus_Trab, '') = ''
+      Begin
+         Insert Into #TmpEstatusTrab
+        (idEstatus)
+        Select Distinct STATUS_TRAB
+        From   dbo.RH_TRAB;
+     End
+  Else
+     Begin
+         Insert Into #TmpEstatusTrab
+        (idEstatus)
+        Select Distinct STATUS_TRAB
+        From   String_split(@PsEstatus_Trab, ',') a
+        Join   dbo.RH_TRAB b
+        On     b.STATUS_TRAB = a.value;
+        If @@Rowcount = 0
+           Begin
+              Select @PnError   = 3,
+                     @PsMensaje = 'La Lista de Estatus del Trabajador Esta Vacía.'
+
+              Select @PnError IdError, @PsMensaje Error
+              Set Xact_Abort Off
+              Return
+
+           End
+     End
+
+--
+-- Filtro para Consulta de Ubicación.
+--
+
+   If Isnull(@PsCla_Ubicacion, '') = ''
+      Begin
+         Insert Into #tmpUbicacion
+        (CLA_EMPRESA, CLA_UBICACION, NOM_UBICACION)
+         Select Distinct a.CLA_EMPRESA, a.CLA_UBICACION, a.NOM_UBICACION
+         From   dbo.RH_UBICACION a
+         Join   #TempEmpresa     b
+         On     b.CLA_EMPRESA = a.CLA_EMPRESA;
+      End
+   Else
+      Begin
+         Insert Into #tmpUbicacion
+        (CLA_EMPRESA, CLA_UBICACION, NOM_UBICACION)
+         Select Distinct b.CLA_EMPRESA, b.CLA_UBICACION, b.NOM_UBICACION
+         From   String_split(@PsCla_Ubicacion, ',') a
+         Join   dbo.RH_UBICACION                    b
+         On     b.CLA_UBICACION   = a.value
+         Join   #TempEmpresa     c
+         On     c.CLA_EMPRESA     = b.CLA_EMPRESA;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 4,
+                      @PsMensaje = 'La Lista de Ubicaciones Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
+
+--
+-- Filtro para Consulta de los centros de Costo.
+--
+
+   If Isnull(@PsCla_CentroCosto, '') = ''
+      Begin
+         Insert Into #tmpCentroCosto
+        (CLA_EMPRESA, CLA_CENTRO_COSTO, NOM_CENTRO_COSTO)
+         Select Distinct a.CLA_EMPRESA, a.CLA_CENTRO_COSTO, a.NOM_CENTRO_COSTO
+         From   dbo.RH_CENTRO_COSTO a
+         Join   #TempEmpresa     c
+         On     c.CLA_EMPRESA     = a.CLA_EMPRESA;
+      End
+   Else
+      Begin
+        
+         Insert Into #tmpCentroCosto
+        (CLA_EMPRESA, CLA_CENTRO_COSTO, NOM_CENTRO_COSTO)
+         Select Distinct b.CLA_EMPRESA, b.CLA_CENTRO_COSTO, b.NOM_CENTRO_COSTO
+         From   String_split(@PsCla_CentroCosto, ',') a
+         Join   dbo.RH_CENTRO_COSTO                   b
+         On     b.CLA_CENTRO_COSTO = a.value
+         Join   #TempEmpresa     c
+         On     c.CLA_EMPRESA      = b.CLA_EMPRESA;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 5,
+                      @PsMensaje = 'La Lista de Centros de Costos Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
+
+--
+-- Filtro para Consulta de los Departamentos
+--
+
+   If Isnull(@PsCla_Depto, '') = ''
+      Begin
+         Insert Into #tmpDepto
+        (CLA_EMPRESA, CLA_DEPTO, NOM_DEPTO, CLA_AREA, NOM_AREA)
+         Select Distinct t1.CLA_EMPRESA, t1.CLA_DEPTO, t1.NOM_DEPTO,
+                t1.CLA_AREA,    t2.NOM_AREA
+         From   dbo.RH_DEPTO    t1
+         LEFT   Join dbo.RH_AREA t2
+         On     t2.CLA_EMPRESA = t1.CLA_EMPRESA
+         And    t2.CLA_AREA    = t1.CLA_AREA
+         Join   #TempEmpresa     c
+         On     c.CLA_EMPRESA     = t1.CLA_EMPRESA;
+      End
+   Else
+      Begin
+         Insert Into #tmpDepto
+        (CLA_EMPRESA, CLA_DEPTO, NOM_DEPTO, CLA_AREA, NOM_AREA)
+         Select Distinct t2.CLA_EMPRESA, t2.CLA_DEPTO, t2.NOM_DEPTO,
+                t2.CLA_AREA,    t3.NOM_AREA
+         From   String_split(@PsCla_Depto, ',') t1
+         Join   dbo.RH_DEPTO                    t2
+         On     t2.CLA_DEPTO   = t1.value
+         LEFT   Join dbo.RH_AREA                t3
+         On     t3.CLA_EMPRESA = t2.CLA_EMPRESA
+         And    t3.CLA_AREA    = t2.CLA_AREA
+         Join   #TempEmpresa     c
+         On     c.CLA_EMPRESA  = T2.CLA_EMPRESA;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 6,
+                      @PsMensaje = 'La Lista de Departamentos Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
+
+--
+-- Filtro para Consulta de los Regimenes IMSS
+--
+
+   If Isnull(@PsCla_RegImss, '') = ''
+      Begin
+         Insert Into #tmpRegImss
+        (CLA_REG_IMSS, CLA_EMPRESA, NOM_REG_IMSS, NUM_REG_IMSS)
+         Select Distinct a.CLA_REG_IMSS, a.CLA_EMPRESA, a.NOM_REG_IMSS, a.NUM_REG_IMSS
+         From   dbo.RH_REG_IMSS  a
+         Join   #TempEmpresa     c
+         On     c.CLA_EMPRESA     = a.CLA_EMPRESA
+         Order  By 1;
+      End
+   Else
+       Begin
+         Insert Into #tmpRegImss
+        (CLA_REG_IMSS, CLA_EMPRESA, NOM_REG_IMSS, NUM_REG_IMSS)
+         Select Distinct b.CLA_REG_IMSS, b.CLA_EMPRESA, b.NOM_REG_IMSS, b.NUM_REG_IMSS
+         From   String_split(@PsCla_RegImss, ',') a
+         Join   dbo.RH_REG_IMSS                   b
+         On     b.CLA_REG_IMSS = @PsCla_RegImss
+         Join   #TempEmpresa     c
+         On     c.CLA_EMPRESA     = b.CLA_EMPRESA
+         Order  By 1;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 7,
+                      @PsMensaje = 'La Lista de los Regimen del IMSS Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
+
+--
+-- Filtro para Consulta de los Trabajadores
+--
+   If Isnull(@PsCla_Trab, '') = ''
+      Begin
+         Insert Into #TempTrabajador
+        (CLA_EMPRESA, CLA_TRAB)
+         Select Distinct a.CLA_EMPRESA, a.CLA_TRAB
+         From   dbo.RH_TRAB       a
+         Join   #TempEmpresa b
+         On     b.CLA_EMPRESA      = a.CLA_EMPRESA
+         And    b.cla_razon_social = a.CLA_RAZON_SOCIAL
+         Order  By 2;
+      End
+   Else
+      Begin
+         Insert Into #TempTrabajador
+        (CLA_EMPRESA, CLA_TRAB)
+         Select Distinct b.CLA_EMPRESA, b.CLA_TRAB
+         From   String_split(@PsCla_Trab, ',') a
+         Join   dbo.RH_Trab                    b
+         On     b.CLA_TRAB      = a.value
+         Join   #TempEmpresa                   c
+         On     c.CLA_EMPRESA      = b.CLA_EMPRESA
+         And    c.cla_razon_social = b.CLA_RAZON_SOCIAL
+         Order  By 2;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 8,
+                      @PsMensaje = 'La Lista de los Trabajadores Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
+
+--
+-- Consulta de los Períodos de Nomina
+--
+
+   If Isnull(@PsCla_Periodo, '') = ''
+      Begin
+         Insert Into #tempPeriodo
+       (CLA_EMPRESA, CLA_PERIODO, NOM_PERIODO)
+         Select Distinct a.CLA_EMPRESA, a.CLA_PERIODO, a.NOM_PERIODO
+         From   dbo.RH_PERIODO    a
+         Join   #TempEmpresa      b
+         On     b.CLA_EMPRESA      = a.CLA_EMPRESA
+         And    b.cla_razon_social = a.CLA_RAZON_SOCIAL
+         Order  By 2;
+      End
+   Else
+      Begin
+         Insert Into #tempPeriodo
+        (CLA_EMPRESA, CLA_PERIODO, NOM_PERIODO)
+         Select Distinct b.CLA_EMPRESA, b.CLA_PERIODO, b.NOM_PERIODO
+         From   String_split(@PsCla_Periodo, ',') a
+         Join   dbo.RH_PERIODO              b
+         On     b.CLA_PERIODO      = a.value
+         Join   #TempEmpresa c
+         On     c.CLA_EMPRESA      = b.CLA_EMPRESA
+         And    c.cla_razon_social = b.CLA_RAZON_SOCIAL
+         Order  By 2;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 10,
+                      @PsMensaje = 'La Lista de los períodos de nómina Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
+
+--
+-- Consulta de los Puestos.
+--
+
+        
+   If Isnull(@PsCla_Puestos, '') = ''
+      Begin
+         Insert Into #tmpPuesto
+        (CLA_EMPRESA, CLA_PUESTO, NOM_PUESTO)
+         Select Distinct t1.CLA_EMPRESA, t1.CLA_PUESTO,  t1.NOM_PUESTO
+         From   dbo.RH_PUESTO t1
+         Join   #TempEmpresa  t2
+         On     t2.CLA_EMPRESA     = T1.CLA_EMPRESA
+         Order  By 2;
+      End
+   Else
+      Begin
+         Insert Into #tmpPuesto
+        (CLA_EMPRESA, CLA_PUESTO, NOM_PUESTO)
+         Select Distinct b.CLA_EMPRESA, b.CLA_PUESTO,  b.NOM_PUESTO
+         From   String_split(@PsCla_Puestos, ',') a
+         Join   dbo.RH_PUESTO                     b
+         On     b.CLA_PUESTO      = a.value
+         Join   #TempEmpresa      c
+         On     c.CLA_EMPRESA     = b.CLA_EMPRESA
+         Order  by 2;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 11,
+                      @PsMensaje = 'La Lista de los Puestos Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
+
+--
+-- Consulta Principal del Reporte.
 --
 
    Select T1.CLA_TRAB, dbo.fnNombreCompletoTrab(T1.CLA_EMPRESA, T1.CLA_TRAB) NOMBRE,
@@ -73,7 +549,7 @@ Begin
           Trim(T2.NOM_PUESTO)            NOM_PUESTO,
           T4.CLA_CENTRO_COSTO            CLA_CENTRO_COSTO,
           Trim(T4.NOM_CENTRO_COSTO)      NOM_CENTRO_COSTO,
-          T1.CLA_UBICACION_BASE          CLA_UBICACION,
+          T13.CLA_UBICACION              CLA_UBICACION,
           Trim(T13.NOM_UBICACION)        NOM_UBICACION,
           T1.CLA_DEPTO                   CLA_DEPTO,
           Trim(T11.NOM_DEPTO)            NOM_DEPTO,
@@ -107,7 +583,9 @@ Begin
                Then  'Tasa INFONAVIT'
                Else ''
           End  TIPOINFO,
-          T1.VALOR_TASA_INFO  TASAINFO,
+          T1.VALOR_TASA_INFO   TASAINFO,
+          T1.FECHA_INI_DESCINF FECHA_INICIAL_INFO,
+          T1.FECHA_SUSP_DESC_INF FECHA_SUPENSION_INFO,
          (Select Top 1 NOM_CONTRATO
           From   dbo.RH_TIPO_CONTRATO
           Where  CLA_CONTRATO = T1.TIPO_CONTRATO ) EVENTUAL_PLANTA,
@@ -132,8 +610,8 @@ Begin
           T1.SEXO                       GENERO,
           dbo.fnNumLetra(T1.SUELDO_MENSUAL,1) SUELDO_LETRA,
           T7.CLA_TAB_PRE,
-          T7.NOM_TAB_PRE, x.DIAS_VAC VACACIONES, x.PRIMA_VAC PRIMA_VAC,
-          x.DIAS_AGUI AGUINALDO,
+          T7.NOM_TAB_PRE,
+          x.DIAS_VAC VACACIONES, x.DIAS_AGUI AGUINALDO, x.PRIMA_VAC PRIMA_VAC,
           dbo.Fn_FDOCJA_AHORRO(T1.CLA_EMPRESA, T1.CLA_TRAB, 2)   FDO_AHORRO,
           dbo.Fn_FDOCJA_AHORRO(T1.CLA_EMPRESA, T1.CLA_TRAB, 3)   CAJA_AHORRO,
           Convert(Varchar,T1.FECHA_BAJA ,103)   FECHA_BAJA,
@@ -170,6 +648,14 @@ Begin
                Then  'SI APLICA'
                Else 'NO APLICA'
           End  APLICA_IMSS,
+          Isnull((Select Sum(GRAV_IMSS)
+                 From   dbo.RH_DET_REC_HISTO a
+                 Where  CLA_EMPRESA = t1.CLA_EMPRESA
+                 And    CLA_TRAB    = T1.CLA_TRAB
+                 And    NUM_NOMINA = ( Select MAX(num_nomina)
+                                       From   dbo.RH_DET_REC_HISTO
+                                       Where  CLA_TRAB = a.CLA_TRAB
+                                       And    CLA_EMPRESA = a.CLA_EMPRESA)), 0.00) VARIABLE_IMSS,
           Case When T1.APLICA_DEC = 1
                Then 'SI APLICA'
                Else 'NO APLICA'
@@ -178,18 +664,24 @@ Begin
                Then 'SI APLICA'
                Else 'NO APLICA'
           End  APLICA_DECARACION_SUE,
- --
-          T1.fotografia FOTOGRAFIA, t1.FACTOR_INT FACTOR_INTEGRACION,
+--
+          Iif(CAST(T1.fotografia as Varbinary(Max)) Is null, 'NO', 'SI') "FOTOGRAFIA",
+--
+          t1.FACTOR_INT FACTOR_INTEGRACION,
           dbo.Fn_buscaDatoComplementario(t1.CLA_EMPRESA, t1.CLA_TRAB, 'Vales de despensa') VALESDESPENSA,
-          dbo.Fn_buscaDatoComplementario(t1.CLA_EMPRESA, t1.CLA_TRAB, 'ESCOLARIDAD')       ESCOLARIDAD
+          dbo.Fn_buscaDatoComplementario(t1.CLA_EMPRESA, t1.CLA_TRAB, 'ESCOLARIDAD')       ESCOLARIDAD,
+          dbo.fnObtenerNombreJefe (t1.CLA_TRAB, t1.CLA_EMPRESA, 1) JEFE_INMEDIATO
    From  dbo.RH_TRAB   T1
-   Join  dbo.RH_PUESTO T2
+   Join  #TempRazon_Social T14
+   On    T14.CLA_RAZON_SOCIAL = T1.CLA_RAZON_SOCIAL
+   And   T14.CLA_EMPRESA      = T1.CLA_EMPRESA
+   Join  #tmpPuesto    T2
    On    T1.CLA_EMPRESA        = T2.CLA_EMPRESA
    And   T1.CLA_PUESTO         = T2.CLA_PUESTO
    Join  dbo.RH_FORMA_PAGO T3
    On    T1.CLA_EMPRESA        = T3.CLA_EMPRESA
    And   T1.CLA_FORMA_PAGO     = T3.CLA_FORMA_PAGO
-   Join  dbo.RH_CENTRO_COSTO T4
+   Join  #tmpCentroCosto T4
    On    T1.CLA_EMPRESA        = T4.CLA_EMPRESA
    And   T1.CLA_CENTRO_COSTO   = T4.CLA_CENTRO_COSTO
    Join  dbo.RH_CLASIFICACION T5
@@ -197,28 +689,30 @@ Begin
    And   T1.CLA_CLASIFICACION  = T5.CLA_CLASIFICACION
    LEFT  Join dbo.RH_BANCO T6
    On    T1.CLA_BANCO          = T6.CLA_BANCO
-   Join  dbo.RH_UBICACION T8
-   On    T1.CLA_EMPRESA        = T8.CLA_EMPRESA
-   And   T1.CLA_UBICACION_BASE = T8.CLA_UBICACION
-   Join  dbo.RH_DEPTO  T11
+   Join  #tmpDepto    T11
    On    T1.CLA_EMPRESA = T11.CLA_EMPRESA
    And   T1.CLA_DEPTO   = T11.CLA_DEPTO
-   Join  RH_PERIODO T12
+   Join  #tempPeriodo T12
    On    T1.CLA_PERIODO = T12.CLA_PERIODO
    And   T1.CLA_EMPRESA = T12.CLA_EMPRESA
-   Join  RH_UBICACION T13
-   On    T1.CLA_UBICACION_BASE  = t13.CLA_UBICACION
-   And   T1.CLA_EMPRESA         = T13.CLA_EMPRESA
-   Join  dbo.RH_RAZON_SOCIAL T14
-   On    t1.CLA_RAZON_SOCIAL = T14.CLA_RAZON_SOCIAL
-   And   T1.CLA_EMPRESA      = T14.CLA_EMPRESA
-   Join  dbo.RH_REG_IMSS T15
+   Join  #tmpUbicacion T13
+   On    T1.CLA_EMPRESA         = T13.CLA_EMPRESA
+   And   T1.CLA_UBICACION_BASE  = T13.CLA_UBICACION
+   Join  #tmpRegImss T15
    On    t1.CLA_REG_IMSS = T15.CLA_REG_IMSS
    And   T1.CLA_EMPRESA  = T15.CLA_EMPRESA
+   Join  #TempEmpresa T16
+   On    T1.CLA_EMPRESA      = T16.CLA_EMPRESA
+   And   T1.CLA_RAZON_SOCIAL = T16.CLA_RAZON_SOCIAL
    Join  dbo.RH_ENC_TAB_PRESTAC T7
    On    T1.CLA_TAB_PRE  = T7.CLA_TAB_PRE
-   And   T1.CLA_EMPRESA  =T7.CLA_EMPRESA
-   Join  (Select a.CLA_EMPRESA, a.CLA_TRAB, DIAS_VAC, PRIMA_VAC, DIAS_AGUI 
+   And   T1.CLA_EMPRESA  = T7.CLA_EMPRESA
+   Join  #TmpEstatusTrab   T18
+   On    T1.STATUS_TRAB  = t18.idEstatus
+   Join  #TempTrabajador   t19
+   On    T1.CLA_TRAB     = T19.CLA_TRAB
+   And   T1.CLA_EMPRESA  = T7.CLA_EMPRESA  
+   Join  (Select a.CLA_EMPRESA, a.CLA_TRAB, DIAS_VAC, PRIMA_VAC, DIAS_AGUI
           From   RH_TRAB a
           Join   RH_ENC_TAB_PRESTAC b
           On     b.CLA_TAB_PRE = a.CLA_TAB_PRE
@@ -229,16 +723,10 @@ Begin
           And    c.ANTIG       = dbo.fnStd_CalcAntig(0, FECHA_ING, @w_fecha, a.CLA_TRAB, a.CLA_EMPRESA, 3)) x
    On    x.CLA_EMPRESA         = T1.CLA_EMPRESA
    And   x.CLA_TRAB            = T1.CLA_TRAB
-   Where T1.CLA_EMPRESA        = iif(@Empresa          Is Null, T1.CLA_EMPRESA,        @Empresa)
-   And   T1.CLA_RAZON_SOCIAL   = iif(@RAZON_SOCIAL     Is Null, T1.CLA_RAZON_SOCIAL,   @RAZON_SOCIAL)
-   And   T1.CLA_UBICACION_BASE = iif(@UBICACION        Is Null, T1.CLA_UBICACION_BASE, @UBICACION)
-   And   T1.CLA_PERIODO        = iif(@Periodo          Is Null, T1.CLA_PERIODO,        @Periodo)
-   And   T1.STATUS_TRAB        = iif(@STATUS           Is Null, T1.STATUS_TRAB,        @STATUS)
-   And   T1.cla_trab           = iif(@idtrabajador     Is null, T1.cla_trab,           @idtrabajador)
-   And   T1.cla_depto          = Iif(@PnIdDepartamento Is null, T1.cla_depto,          @PnIdDepartamento)
-   And   DBO.fnc_ValidaSeguridadStd(T1.CLA_EMPRESA, @nUsuario,T1.CLA_UBICACION_BASE,T1.CLA_dEPTO,T1.CLA_PERIODO) > 0
+   Where DBO.fnc_ValidaSeguridadStd(T1.CLA_EMPRESA, @nUsuario,T1.CLA_UBICACION_BASE,T1.CLA_dEPTO,T1.CLA_PERIODO) > 0
    Order By T1.CLA_TRAB
-                   
+
+   Set Xact_Abort Off
    Return
     
 End

@@ -9,7 +9,7 @@ Begin
 
    Insert Into ColumnasNoAplicaTbl
   (procedimiento, secuencia, NomColumna, nivel)
-   Select @w_procedimiento,  1, 'CLA_EMPRESA', 1
+   Select @w_procedimiento,  1, 'CLA_EMPRESA', 3
    Union
    Select @w_procedimiento,  2, 'CLA_PERIODO', 1
    Union
@@ -21,11 +21,11 @@ Begin
    Union
    Select @w_procedimiento,  6, 'CLA_RAZON_SOCIAL', 1
    Union
-   Select @w_procedimiento,  7, 'CLA_UBICACION', 1
+   Select @w_procedimiento,  7, 'CLA_UBICACION', 3
    Union
-   Select @w_procedimiento,  8, 'CLA_CENTRO_COSTO', 1
+   Select @w_procedimiento,  8, 'CLA_CENTRO_COSTO', 3
    Union
-   Select @w_procedimiento,  9, 'CLA_DEPTO', 1
+   Select @w_procedimiento,  9, 'CLA_DEPTO', 3
    Union
    Select @w_procedimiento, 10, 'CLA_PUESTO', 1
    Union
@@ -44,10 +44,12 @@ Begin
    Select @w_procedimiento, 17, 'CLA_TAB_SUE', 1
 --
    Union
-   Select @w_procedimiento, 18, 'SUE_INT', 2
+   Select @w_procedimiento, 18, 'CONCECUTIVO', 1
+--
    Union
-   Select @w_procedimiento, 19, 'TOT_PER', 2;
-
+   Select @w_procedimiento, 19, 'SUE_INT', 2
+   Union
+   Select @w_procedimiento, 20, 'TOT_PER', 2;
    Return;
 
 End

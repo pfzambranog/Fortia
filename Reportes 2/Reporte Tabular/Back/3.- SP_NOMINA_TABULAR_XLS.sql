@@ -17,9 +17,10 @@
 --@MostrarGravExen=0,
 --@MostrarGravImss=0,
 --@MostrarTodos=1,
+--@MostrarProv =1,
 --@DetalladoXNom=1,
 --@IncluirNomAbiertas=1,
---@statusNom
+--@statusNom = 1
 
 
 Create Or Alter Procedure dbo.SP_NOMINA_TABULAR_XLS
@@ -44,7 +45,7 @@ Create Or Alter Procedure dbo.SP_NOMINA_TABULAR_XLS
    @MostrarGravExen          Integer,
    @MostrarGravImss          Integer,
    @MostrarTodos             Integer,
-   @MostrarProv              Integer = 1,
+   @MostrarProv              Integer,
    @DetalladoXNom            Integer,
    @IncluirNomAbiertas       Integer,
    @statusNom                Integer)
@@ -91,8 +92,7 @@ Begin
          @AnioMesFin  = Case When @MesFin > 0
                              Then (@Anio * 100) + @MesFin
                              Else (@Anio * 100) + 12
-                        End,
-         @MostrarProv = 1;
+                        End;
 
    If Not Exists ( Select CLA_GPO_USUARIO
                    From   SYS_DET_GPO_USUARIO
@@ -118,7 +118,7 @@ Begin
 --
 
    Create Table #tmpFinal
-  (CONCECUTIVO   Integer Not Null IDENTITY (1, 1) Primary Key,
+  (Concecutivo   Integer Not Null IDENTITY (1, 1) Primary Key,
    Columna1      Varchar(500),
    Columna2      Varchar(500),
    Columna3      Varchar(500),
@@ -307,6 +307,12 @@ Begin
    MOSTRAR_MONTO     Varchar(Max),
    Index I_tmpPerdedIdx01 (CLA_EMPRESA, CLA_PERDED));
 
+   Create Table #tempProvisiones
+  (cla_empresa      Integer Not Null,
+   cla_perded       Integer Not Null,
+   Constraint tempProvisionesPk
+   Primary Key (CLA_EMPRESA, CLA_PERDED));
+
    Create Table #tmpNominas
   (CLA_EMPRESA      Integer      Not Null,
    CLA_PERIODO      Integer      Not Null,
@@ -402,11 +408,9 @@ Begin
    DIAS_POR_PAGAR    Decimal(18, 2) Not Null,
    Index DIAS_POR_PAGARIDX01 (cla_empresa, CLA_TRAB, CLA_PERIODO, NUM_NOMINA, ANIO_MES));
 
-
    Create Table #tmpNominasTrab
   (CLA_TRAB          Integer           Null,
    NOM_TRAB          Varchar(150)      Null,
-   FECHA_ING         Varchar( 10)      Null,
    FECHA_ING_GRUPO   Varchar( 10)      Null,
    NSS               Varchar( 20)      Null,
    RFC               Varchar( 20)      Null,
@@ -417,6 +421,7 @@ Begin
    NOM_AREA          Varchar(150)      Null,
    CLA_UBICACION     Integer       Not Null,
    NOM_UBICACION     Varchar(150)      Null,
+   NOM_CENTRO_COSTO  Varchar(150)      Null,
    NOM_DEPTO         Varchar(150)      Null,
    NOM_PUESTO        Varchar(150)      Null,
    NOM_PERIODO       Varchar(150)      Null,
@@ -471,6 +476,18 @@ Begin
          Set @Nominas = '[' + Isnull(@ClaPer, '0') + '-' +
                          Replace(Replace(Isnull(@Nominas,'0'),
                          Space(1),''), ',', '],[' + Isnull(@ClaPer,'0') + '-') +']';;
+      End
+
+   If @MostrarProv = 1
+      Begin
+         Insert Into #tempProvisiones
+         (CLA_EMPRESA, CLA_PERDED)
+         Select CLA_EMPRESA, cla_perded
+         From   dbo.RH_PERDED
+         Where  CLA_EMPRESA     = @ClaEmp
+         And    NO_AFECTAR_NETO = 1
+         And    NO_IMPRIMIR     = 1
+         And    ES_PROVISION    = 1;
       End
 
    Select @ClaUbicacion   = '[' + Replace(Isnull(@ClaUbicacion,  '0'), ',', '],[') + ']',
@@ -614,9 +631,10 @@ Begin
          And   (T1.TIPO_PERDED     = @TipoConcepto
          Or     @TipoConcepto      = 0 )
          And   (T1.NO_AFECTAR_NETO = 0
-         Or    (T1.NO_AFECTAR_NETO = 1
-         And    T1.NO_IMPRIMIR     = 1
-         And    T1.ES_PROVISION    = @MostrarProv))
+         Or     Exists             ( Select Top 1 1
+                                     From    #tempProvisiones
+                                     Where   CLA_EMPRESA = t1.CLA_EMPRESA
+                                     And     cla_perded  = t1.CLA_PERDED))
          And   (Charindex('[' + Convert(Varchar, T1.CLA_PERDED) + ']', @ClaPerded) > 0
          Or     @ClaPerded         = '[0]')
          And    Not Exists         ( Select Top 1 1
@@ -657,14 +675,15 @@ Begin
          And    T2.CLA_EMPRESA     = T3.CLA_EMPRESA
          Where  T1.CLA_EMPRESA     = @ClaEmp
          And   (T1.NO_AFECTAR_NETO = 0
-         Or    (T1.NO_AFECTAR_NETO = 1
-         And    T1.NO_IMPRIMIR     = 1
-         And    T1.ES_PROVISION    = @MostrarProv))
-         And   (Charindex('[' + Convert(Varchar, T1.CLA_PERDED) + ']', @ClaPerded) > 0
-         Or     @ClaPerded         = '[0]')
+         Or     Exists             ( Select top 1 1
+                                     From   #tempProvisiones
+                                     Where  cla_empresa = T1.CLA_EMPRESA
+                                     And    cla_perded  = T1.CLA_PERDED))
          And    Not Exists         ( Select Top 1 1
                                      From   #ColumnasNoAplica2
                                      Where  Cla_Perded = T1.CLA_PERDED)
+         And   (Charindex('[' + Convert(Varchar, T1.CLA_PERDED) + ']', @ClaPerded) > 0
+         Or     @ClaPerded         = '[0]')
          Order  BY NO_AFECTAR_NETO, ES_PROVISION, TIPO_PERDED, ORDEN, CLA_PERDED;
       End
 --
@@ -700,7 +719,7 @@ Begin
    And   (Charindex('[' + Convert(Varchar, CLA_REG_IMSS) + ']', @ClaRegImss) > 0
    Or     @ClaRegImss = '[0]')
 
-   Insert Into   #tmpCC
+   Insert Into #tmpCC
    Select CLA_EMPRESA, CLA_CENTRO_COSTO, NOM_CENTRO_COSTO
    From   dbo.RH_CENTRO_COSTO
    Where  CLA_EMPRESA = @ClaEmp
@@ -785,18 +804,17 @@ Begin
    Group  By a.cla_empresa, a.CLA_TRAB, a.CLA_PERIODO, a.ANIO_MES, a.NUM_NOMINA;
 
    Insert Into #tmpNominasTrab
-  (CLA_EMPRESA, CLA_RAZON_SOCIAL, CLA_PERIODO,   NUM_NOMINA,
-   NOM_AREA,    CLA_UBICACION,    NOM_UBICACION, NOM_DEPTO,
-   NOM_PUESTO,  NOM_PERIODO,      CLA_TRAB,      NOM_TRAB,
-   FECHA_ING,   FECHA_ING_GRUPO,  NSS,           RFC,
-   ANIO_MES,    INICIO_PER,       FIN_PER,       SUE_DIA,
-   SUE_INT,     TOT_PER,          TOT_DED,       TOT_NETO,
-   Tipo_Companiero, DIAS_POR_PAGAR)
+  (CLA_EMPRESA,      CLA_RAZON_SOCIAL, CLA_PERIODO,   NUM_NOMINA,
+   NOM_AREA,         CLA_UBICACION,    NOM_UBICACION, NOM_CENTRO_COSTO,
+   NOM_DEPTO,        NOM_PUESTO,       NOM_PERIODO,   CLA_TRAB,
+   NOM_TRAB,         FECHA_ING_GRUPO,  NSS,           RFC,
+   ANIO_MES,         INICIO_PER,       FIN_PER,       SUE_DIA,
+   SUE_INT,          TOT_PER,          TOT_DED,       TOT_NETO,
+   Tipo_Companiero,  DIAS_POR_PAGAR)
    Select T1.CLA_EMPRESA, T1.CLA_RAZON_SOCIAL, T1.CLA_PERIODO,   t1.NUM_NOMINA ,
-          t7.NOM_AREA,    t5.CLA_UBICACION,    t5.NOM_UBICACION, T7.NOM_DEPTO,
-          t13.NOM_PUESTO, t1.NOM_PERIODO,      t2.CLA_TRAB,
+          t7.NOM_AREA,    t5.CLA_UBICACION,    t5.NOM_UBICACION, t6.NOM_CENTRO_COSTO,
+          T7.NOM_DEPTO,   t13.NOM_PUESTO,      t1.NOM_PERIODO,   t2.CLA_TRAB,
           Concat(t3.AP_PATERNO, ' ', t3.AP_MATERNO, ' ', t3.NOM_TRAB),
-          Convert(Varchar, t3.FECHA_ING,       101),
           Convert(Varchar, t3.FECHA_ING_GRUPO, 101),
           t3.NSS, t3.RFC,  T2.ANIO_MES,
           Convert(Varchar(10), T1.INICIO_PER,103),
@@ -807,71 +825,69 @@ Begin
           t2.TOT_DED,
           t2.TOT_NETO,
           t3.SINDICALIZADO, Isnull(t99.DIAS_POR_PAGAR, 0)
-   From  #tmpNominas          t1
-   Join  dbo.RH_ENC_REC_HISTO t2
-   On    t2.ANIO_MES    = t1.ANIO_MES
-   And   t2.CLA_EMPRESA = t1.CLA_EMPRESA
-   And   t2.CLA_PERIODO = t1.CLA_PERIODO
-   And   t2.NUM_NOMINA  = t1.NUM_NOMINA
-   Join  #tmpTrabNombres      t3
-   On    t3.CLA_EMPRESA = t2.CLA_EMPRESA
-   And   t3.CLA_TRAB    = t2.CLA_TRAB
-   Join  #tmpRegImss          t4
-   On    t4.CLA_EMPRESA  = t2.CLA_EMPRESA
-   And   t4.CLA_REG_IMSS = t2.CLA_REG_IMSS
-   Join  #tmpUbicacion        t5
-   On    t5.CLA_EMPRESA   = t2.CLA_EMPRESA
-   And   t5.CLA_UBICACION = t2.CLA_UBICACION_BASE
-   Join  #tmpCC               t6
-   On    t6.CLA_EMPRESA      = t2.CLA_EMPRESA
-   And   t6.CLA_CENTRO_COSTO = t2.CLA_CENTRO_COSTO
-   Join  #tmpDepto            t7
-   On    t7.CLA_EMPRESA      = t2.CLA_EMPRESA
-   And   t7.CLA_DEPTO        = t2.CLA_DEPTO
-   LEFT  Join #tmpFormaPago   t8
-   On    t8.CLA_EMPRESA    = t2.CLA_EMPRESA
-   And   t8.CLA_FORMA_PAGO = t2.CLA_FORMA_PAGO
-   LEFT  Join #tmpBanco       t9
-   On    t9.CLA_BANCO      = t3.CLA_BANCO
-   Join  #tmpClasificacion    t10
-   On    t10.CLA_EMPRESA       = t2.CLA_EMPRESA
-   And   t10.CLA_CLASIFICACION = t2.CLA_CLASIFICACION
-   Join  #tmpTabSue           t12
-   On    t12.CLA_EMPRESA = t2.CLA_EMPRESA
-   And   t12.CLA_TAB_SUE = t2.CLA_TAB_SUE
-   Left  Join  #tmpPuesto           t13
-   On    t13.CLA_EMPRESA = t2.CLA_EMPRESA
-   And   t13.CLA_PUESTO  = t2.CLA_PUESTO
-   Left  Join  #DIAS_POR_PAGAR T99
-   On    t99.CLA_EMPRESA = t2.CLA_EMPRESA
-   And   t99.CLA_TRAB    = t2.CLA_TRAB
-   And   t99.ANIO_MES    = t2.ANIO_MES
-   And   t99.CLA_PERIODO = t2.CLA_PERIODO
-   And   t99.NUM_NOMINA  = t2.NUM_NOMINA;
+   From   #tmpNominas          t1
+   Join   dbo.RH_ENC_REC_HISTO t2
+   On     t2.ANIO_MES    = t1.ANIO_MES
+   And    t2.CLA_EMPRESA = t1.CLA_EMPRESA
+   And    t2.CLA_PERIODO = t1.CLA_PERIODO
+   And    t2.NUM_NOMINA  = t1.NUM_NOMINA
+   Join   #tmpTrabNombres      t3
+   On     t3.CLA_EMPRESA = t2.CLA_EMPRESA
+   And    t3.CLA_TRAB    = t2.CLA_TRAB
+   Join   #tmpRegImss          t4
+   On     t4.CLA_EMPRESA  = t2.CLA_EMPRESA
+   And    t4.CLA_REG_IMSS = t2.CLA_REG_IMSS
+   Join   #tmpUbicacion        t5
+   On     t5.CLA_EMPRESA   = t2.CLA_EMPRESA
+   And    t5.CLA_UBICACION = t2.CLA_UBICACION_BASE
+   Join   #tmpCC               t6
+   On     t6.CLA_EMPRESA      = t2.CLA_EMPRESA
+   And    t6.CLA_CENTRO_COSTO = t2.CLA_CENTRO_COSTO
+   Join   #tmpDepto            t7
+   On     t7.CLA_EMPRESA      = t2.CLA_EMPRESA
+   And    t7.CLA_DEPTO        = t2.CLA_DEPTO
+   LEFT   Join #tmpFormaPago   t8
+   On     t8.CLA_EMPRESA    = t2.CLA_EMPRESA
+   And    t8.CLA_FORMA_PAGO = t2.CLA_FORMA_PAGO
+   LEFT   Join #tmpBanco       t9
+   On     t9.CLA_BANCO      = t3.CLA_BANCO
+   Join   #tmpClasificacion    t10
+   On     t10.CLA_EMPRESA       = t2.CLA_EMPRESA
+   And    t10.CLA_CLASIFICACION = t2.CLA_CLASIFICACION
+   Join   #tmpTabSue           t12
+   On     t12.CLA_EMPRESA = t2.CLA_EMPRESA
+   And    t12.CLA_TAB_SUE = t2.CLA_TAB_SUE
+   Left   Join  #tmpPuesto           t13
+   On     t13.CLA_EMPRESA = t2.CLA_EMPRESA
+   And    t13.CLA_PUESTO  = t2.CLA_PUESTO
+   Left   Join  #DIAS_POR_PAGAR T99
+   On     t99.CLA_EMPRESA = t2.CLA_EMPRESA
+   And    t99.CLA_TRAB    = t2.CLA_TRAB
+   And    t99.ANIO_MES    = t2.ANIO_MES
+   And    t99.CLA_PERIODO = t2.CLA_PERIODO
+   And    t99.NUM_NOMINA  = t2.NUM_NOMINA;
 
    If @IncluirNomAbiertas = 1
       And @statusNom = 1
       Begin
          Insert Into #tmpNominasTrab
-        (CLA_EMPRESA, CLA_RAZON_SOCIAL, CLA_PERIODO,   NUM_NOMINA,
-         NOM_AREA,    CLA_UBICACION,    NOM_UBICACION, NOM_DEPTO,
-         NOM_PUESTO,  NOM_PERIODO,      CLA_TRAB,      NOM_TRAB,
-         FECHA_ING,   FECHA_ING_GRUPO,  NSS,           RFC,
-         ANIO_MES,    INICIO_PER,       FIN_PER,       SUE_DIA,
-         SUE_INT,     TOT_PER,          TOT_DED,       TOT_NETO,
-         Tipo_Companiero, DIAS_POR_PAGAR)
-         Select T1.CLA_EMPRESA,   T1.CLA_RAZON_SOCIAL, T1.CLA_PERIODO,
-                t1.NUM_NOMINA,    t7.NOM_AREA,         t5.CLA_UBICACION,
-                t5.NOM_UBICACION, t7.NOM_DEPTO,        t13.NOM_PUESTO,
-                t1.NOM_PERIODO,   t2.CLA_TRAB,
+        (CLA_EMPRESA,      CLA_RAZON_SOCIAL, CLA_PERIODO,   NUM_NOMINA,
+         NOM_AREA,         CLA_UBICACION,    NOM_UBICACION, NOM_CENTRO_COSTO,
+         NOM_DEPTO,        NOM_PUESTO,       NOM_PERIODO,   CLA_TRAB,
+         NOM_TRAB,         FECHA_ING_GRUPO,  NSS,           RFC,
+         ANIO_MES,         INICIO_PER,       FIN_PER,       SUE_DIA,
+         SUE_INT,          TOT_PER,          TOT_DED,       TOT_NETO,
+         Tipo_Companiero,  DIAS_POR_PAGAR)
+         Select T1.CLA_EMPRESA,   T1.CLA_RAZON_SOCIAL, T1.CLA_PERIODO,   t1.NUM_NOMINA,
+                t7.NOM_AREA,      t5.CLA_UBICACION,    t5.NOM_UBICACION, t6.NOM_CENTRO_COSTO,
+                t7.NOM_DEPTO,     t13.NOM_PUESTO,      t1.NOM_PERIODO,   t2.CLA_TRAB,
                 Concat(t3.AP_PATERNO, ' ', t3.AP_MATERNO, ' ', t3.NOM_TRAB) NOM_TRAB,
-                Convert(Varchar, t3.FECHA_ING,       101)  FECHA_ING,
                 Convert(Varchar, t3.FECHA_ING_GRUPO, 101)  FECHA_ING_GRUPO,
                 t3.NSS,
                 t3.RFC,
                 T2.ANIO_MES_ISPT ANIO_MES,
-                Convert(Varchar(10),T1.INICIO_PER,103) INICIO_PER,
-                Convert(Varchar(10),T1.FIN_PER,103) FIN_PER,
+                Convert(Varchar(10), T1.INICIO_PER,103) INICIO_PER,
+                Convert(Varchar(10), T1.FIN_PER,   103) FIN_PER,
                 t2.SUE_DIA,
                 t2.SUE_INT,
                 t2.TOT_PER,
@@ -880,15 +896,15 @@ Begin
                 t3.SINDICALIZADO, Isnull(t99.DIAS_POR_PAGAR, 0)
          From   #tmpNominas           t1
          Join   dbo.RH_ENC_REC_ACTUAL t2
-         On     t2.CLA_EMPRESA = t1.CLA_EMPRESA
-         And    t2.CLA_PERIODO = t1.CLA_PERIODO
-         And    t2.NUM_NOMINA  = t1.NUM_NOMINA
+         On     t2.CLA_EMPRESA   = t1.CLA_EMPRESA
+         And    t2.CLA_PERIODO   = t1.CLA_PERIODO
+         And    t2.NUM_NOMINA    = t1.NUM_NOMINA
          Join   #tmpTrabNombres       t3
-         On     t3.CLA_EMPRESA = t2.CLA_EMPRESA
-         And    t3.CLA_TRAB    = t2.CLA_TRAB
+         On     t3.CLA_EMPRESA   = t2.CLA_EMPRESA
+         And    t3.CLA_TRAB      = t2.CLA_TRAB
          Join   #tmpRegImss t4
-         On     t4.CLA_EMPRESA  = t2.CLA_EMPRESA
-         And    t4.CLA_REG_IMSS = t2.CLA_REG_IMSS
+         On     t4.CLA_EMPRESA   = t2.CLA_EMPRESA
+         And    t4.CLA_REG_IMSS  = t2.CLA_REG_IMSS
          Join   #tmpUbicacion t5
          On     t5.CLA_EMPRESA   = t2.CLA_EMPRESA
          And    t5.CLA_UBICACION = t2.CLA_UBICACION_BASE
@@ -906,20 +922,22 @@ Begin
          Join   #tmpClasificacion  t10
          On     t10.CLA_EMPRESA       = t2.CLA_EMPRESA
          And    t10.CLA_CLASIFICACION = t2.CLA_CLASIFICACION
-         Join   #tmpTabSue t12 On t12.CLA_EMPRESA = t2.CLA_EMPRESA And
-                  t12.CLA_TAB_SUE = t2.CLA_TAB_SUE
-         Join   #tmpPuesto t13 On t13.CLA_EMPRESA = t2.CLA_EMPRESA
+         Join   #tmpTabSue t12
+         On     t12.CLA_EMPRESA = t2.CLA_EMPRESA
+         And    t12.CLA_TAB_SUE = t2.CLA_TAB_SUE
+         Join   #tmpPuesto t13
+         On     t13.CLA_EMPRESA = t2.CLA_EMPRESA
          And    t13.CLA_PUESTO = t2.CLA_PUESTO
-         Left  Join  #DIAS_POR_PAGAR T99
-         On    t99.CLA_EMPRESA = t2.CLA_EMPRESA
-         And   t99.CLA_TRAB    = t2.CLA_TRAB
-         And   t99.ANIO_MES    = t2.ANIO_MES
-         And   t99.CLA_PERIODO = t2.CLA_PERIODO
-         And   t99.NUM_NOMINA  = t2.NUM_NOMINA;
+         Left   Join  #DIAS_POR_PAGAR T99
+         On     t99.CLA_EMPRESA = t2.CLA_EMPRESA
+         And    t99.CLA_TRAB    = t2.CLA_TRAB
+         And    t99.ANIO_MES    = t2.ANIO_MES_ISPT
+         And    t99.CLA_PERIODO = t2.CLA_PERIODO
+         And    t99.NUM_NOMINA  = t2.NUM_NOMINA;
 
-    End
+      End
 
-    Select t1.CLA_TRAB,
+   Select t1.CLA_TRAB,
       Max(t1.CLA_EMPRESA) CLA_EMPRESA,
       t1.CLA_PERIODO,
       t1.NUM_NOMINA,
@@ -937,52 +955,68 @@ Begin
       Max(t3.NO_AFECTAR_NETO)NO_AFECTAR_NETO,
       Max(t3.ESBASE_ISPT)ESBASE_ISPT,
       Max(t1.CLA_RAZON_SOCIAL)CLA_RAZON_SOCIAL,
-      Max(t3.ORDEN)ORDEN
-  INTO #tmpPagosConceptos
-  From #tmpNominasTrab t1
-  INNER Join dbo.RH_DET_REC_HISTO t2
-  On t2.ANIO_MES = t1.ANIO_MES And
+      Max(t3.ORDEN) ORDEN
+   INTO #tmpPagosConceptos
+   From #tmpNominasTrab t1
+   Join dbo.RH_DET_REC_HISTO t2
+   On   t2.ANIO_MES = t1.ANIO_MES And
                     t2.CLA_TRAB = t1.CLA_TRAB And
                     t2.CLA_EMPRESA = t1.CLA_EMPRESA And
                     t2.CLA_PERIODO = t1.CLA_PERIODO And
                     t2.NUM_NOMINA = t1.NUM_NOMINA
-           INNER Join #tmpPerded t3 On t3.CLA_EMPRESA = t2.CLA_EMPRESA And
+   Join  #tmpPerded t3 On t3.CLA_EMPRESA = t2.CLA_EMPRESA And
                   t3.CLA_PERDED = t2.CLA_PERDED
   GROUP BY t1.CLA_TRAB,t1.CLA_PERIODO,T3.CLA_PERDED,t1.NUM_NOMINA
 
- If @IncluirNomAbiertas = 1
-   And @statusNom = 1
+  Create CLUSTERED Index I_tmpPagosConceptos On #tmpPagosConceptos
+        (CLA_TRAB, CLA_EMPRESA, CLA_PERIODO, NUM_NOMINA, ANIO_MES)
 
+  If @IncluirNomAbiertas = 1 And
+     @statusNom = 1
+     Begin
+        Insert INTO #tmpPagosConceptos
+        Select t1.CLA_TRAB,
+               Max(t1.CLA_EMPRESA) CLA_EMPRESA,
+               t1.CLA_PERIODO,
+               t1.NUM_NOMINA,
+               Max(t1.ANIO_MES)ANIO_MES,
+               T3.CLA_PERDED,
+               Max(t3.NOM_PERDED)NOM_PERDED,
+               SUM(t2.MONTO)MONTO,
+               SUM(CAST(t2.IMPORTE                AS DECIMAL(10,2)))IMPORTE,
+               SUM(CAST(t2.RES_EXE_SQL            AS DECIMAL(10,2)))EXENTO,
+               SUM(CAST(t2.IMPORTE-t2.RES_EXE_SQL AS DECIMAL(10,2)))GRAVADO,
+               SUM(CAST(t2.GRAV_IMSS              AS DECIMAL(10,2)))GRAV_IMSS,
+               Max(T3.TIPO_PERDED)TIPO_PERDED,
+               Max(t3.ES_PROVISION)ES_PROVISION,
+               Max(t3.ESBASE_IMSS)ESBASE_IMSS,
+               Max(t3.NO_AFECTAR_NETO)NO_AFECTAR_NETO,
+               Max(t1.CLA_RAZON_SOCIAL)CLA_RAZON_SOCIAL,
+               Max(t3.ESBASE_ISPT)ESBASE_ISPT,
+               Max(t3.ORDEN)ORDEN
+        From  #tmpNominasTrab t1
+        Join  dbo.RH_DET_REC_ACTUAL t2
+        On    t2.CLA_TRAB    = t1.CLA_TRAB
+        And   t2.CLA_EMPRESA = t1.CLA_EMPRESA
+        And   t2.CLA_PERIODO = t1.CLA_PERIODO
+        And   t2.NUM_NOMINA = t1.NUM_NOMINA
+        Join  #tmpPerded t3
+        On    t3.CLA_EMPRESA = t2.CLA_EMPRESA
+        And   t3.CLA_PERDED = t2.CLA_PERDED
+        Group  BY t1.CLA_TRAB,t1.CLA_PERIODO,T3.CLA_PERDED,t1.NUM_NOMINA
+    End
 
-  Insert INTO #tmpPagosConceptos
-  Select t1.CLA_TRAB,
-      Max(t1.CLA_EMPRESA) CLA_EMPRESA,
-      t1.CLA_PERIODO,
-      t1.NUM_NOMINA,
-      Max(t1.ANIO_MES)ANIO_MES,
-      T3.CLA_PERDED,
-      Max(t3.NOM_PERDED)NOM_PERDED,
-      SUM(t2.MONTO)MONTO,
-      SUM(CAST(t2.IMPORTE AS DECIMAL(10,2)))IMPORTE,
-      SUM(CAST(t2.RES_EXE_SQL AS DECIMAL(10,2)))EXENTO,
-      SUM(CAST(t2.IMPORTE-t2.RES_EXE_SQL AS DECIMAL(10,2)))GRAVADO,
-      SUM(CAST(t2.GRAV_IMSS AS DECIMAL(10,2)))GRAV_IMSS,
-      Max(T3.TIPO_PERDED)TIPO_PERDED,
-      Max(t3.ES_PROVISION)ES_PROVISION,
-      Max(t3.ESBASE_IMSS)ESBASE_IMSS,
-      Max(t3.NO_AFECTAR_NETO)NO_AFECTAR_NETO,
-      Max(t1.CLA_RAZON_SOCIAL)CLA_RAZON_SOCIAL,
-      Max(t3.ESBASE_ISPT)ESBASE_ISPT,
-      Max(t3.ORDEN)ORDEN
-  From #tmpNominasTrab t1 INNER Join dbo.RH_DET_REC_ACTUAL t2 On t2.CLA_TRAB = t1.CLA_TRAB And
-                    t2.CLA_EMPRESA = t1.CLA_EMPRESA And
-                    t2.CLA_PERIODO = t1.CLA_PERIODO And
-                    t2.NUM_NOMINA = t1.NUM_NOMINA
-           INNER Join #tmpPerded t3 On t3.CLA_EMPRESA = t2.CLA_EMPRESA And
-                  t3.CLA_PERDED = t2.CLA_PERDED
-  GROUP BY t1.CLA_TRAB,t1.CLA_PERIODO,T3.CLA_PERDED,t1.NUM_NOMINA
+--
+-- Actualizacion de Fecha de Inicio y Fecha Fin
+--
 
-  CREATE CLUSTERED Index I_tmpPagosConceptos On #tmpPagosConceptos(CLA_TRAB,CLA_EMPRESA,CLA_PERIODO,NUM_NOMINA,ANIO_MES)
+   If @MesIni Is Not Null And
+      @MesFin Is Not Null
+      Begin
+         Update #tmpNominasTrab
+         Set    INICIO_PER = Convert(Date, Concat('01/', @MesIni, '/', @Anio), 103),
+                FIN_PER    = Eomonth(Convert(Date, Concat('01/', @MesFin, '/', @Anio), 103));
+      End
 
 --
 -- Búsqueda de columnas Iniciales.
@@ -1046,13 +1080,13 @@ Begin
           @w_lineaTotal  = '',
           @w_lineaTotal  = 'Select ';
 
-  Select @OrdenMin      = Max(T1.colorder),
-         @NumCamposMax  = Count(1)
-  From   tempdb.sys.syscolumns T1
-  INNER  Join tempdb.SYS.types T2
-  On     T1.xtype = T2.system_type_id
-  And    T1.id    = @IdEnc
-  And    T1.name NOT In (Select NomColumna
+   Select @OrdenMin      = Max(T1.colorder),
+          @NumCamposMax  = Count(1)
+   From   tempdb.sys.syscolumns T1
+   INNER  Join tempdb.SYS.types T2
+   On     T1.xtype = T2.system_type_id
+   And    T1.id    = @IdEnc
+   And    T1.name NOT In (Select NomColumna
                          From   #ColumnasNoAplica)
   If @DetalladoXNom = 1
      Begin
@@ -1121,9 +1155,13 @@ Begin
 
   WHILE @NumCamposMin <= @NumCamposMax
   Begin
-    Select @ColInsert=@ColInsert + 'Columna'+Convert(Varchar,@NumCamposMin)+Case When @NumCamposMin<>@NumCamposMax Then  ',' Else '' End
+    Select @ColInsert = @ColInsert + 'Columna' + Convert(Varchar,@NumCamposMin) +
+                             Case When @NumCamposMin <> @NumCamposMax
+                                  Then ', '
+                                  Else ''
+                             End
 
-    Select @NumCamposMin=@NumCamposMin + 1
+    Select @NumCamposMin = @NumCamposMin + 1
   End
 
   EXEC('Insert INTO #tmpFinal (' + @ColInsert + ') ' +

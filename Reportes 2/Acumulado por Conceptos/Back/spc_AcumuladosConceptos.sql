@@ -1,18 +1,20 @@
 -- Declare
-   -- @PnCla_RazonSocial         Integer        = 1,
+   -- @PsRazon_Social            Varchar(Max)   = '1',
+   -- @PsCla_Empresa             Varchar(Max)   = '',
    -- @PnAnio                    Integer        = 2025,
-   -- @PnMesIni                  Integer        = Null,
-   -- @PnMesFin                  Integer        = Null,
-   -- @PsCla_Ubicacion           Varchar(Max)   = Null,
-   -- @PsCla_CentroCosto         Varchar(Max)   = Null,
-   -- @PsCla_Depto               Varchar(Max)   = Null,
-   -- @PsCla_PerDed              Varchar(Max)   = Null,
-   -- @PsCla_Periodo             Varchar(Max)   = Null,
-   -- @PsNominas                 Varchar(Max)   = Null,
+   -- @PnMesIni                  Integer        = 0,
+   -- @PnMesFin                  Integer        = 0,
+   -- @PsCla_Ubicacion           Varchar(Max)   = '',
+   -- @PsCla_CentroCosto         Varchar(Max)   = '',
+   -- @PsCla_Depto               Varchar(Max)   = '',
+   -- @PsCla_PerDed              Varchar(Max)   = '',
+   -- @PsCla_Periodo             Varchar(Max)   = '',
+   -- @PsNominas                 Varchar(Max)   = '',
    -- @PnError                   Integer        = 0,
    -- @PsMensaje                 Varchar( 250)  = ' ';
 -- Begin
-   -- Execute dbo.spc_AcumuladosConceptos @PnCla_RazonSocial = @PnCla_RazonSocial,
+   -- Execute dbo.spc_AcumuladosConceptos @PsRazon_Social    = @PsRazon_Social,
+                                       -- @PsCla_Empresa     = @PsCla_Empresa,
                                        -- @PnAnio            = @PnAnio,
                                        -- @PnMesIni          = @PnMesIni,
                                        -- @PnMesFin          = @PnMesFin,
@@ -35,17 +37,18 @@
 -- Go
 
 Create Or Alter Procedure spc_AcumuladosConceptos
-  (@PnCla_RazonSocial         Integer,
+  (@PsRazon_Social            Varchar(Max)   = '',
+   @PsCla_Empresa             Varchar(Max)   = '',
    @PnAnio                    Integer,
-   @PnMesIni                  Integer        = Null,
-   @PnMesFin                  Integer        = Null,
-   @PsCla_Ubicacion           Varchar(Max)   = Null,
-   @PsCla_CentroCosto         Varchar(Max)   = Null,
-   @PsCla_Depto               Varchar(Max)   = Null,
-   @PsCla_TipoNom             Varchar(Max)   = Null,
-   @PsCla_PerDed              Varchar(Max)   = Null,
-   @PsCla_Periodo             Varchar(Max)   = Null,
-   @PsNominas                 Varchar(Max)   = Null,
+   @PnMesIni                  Integer        = 0,
+   @PnMesFin                  Integer        = 0,
+   @PsCla_Ubicacion           Varchar(Max)   = '',
+   @PsCla_CentroCosto         Varchar(Max)   = '',
+   @PsCla_Depto               Varchar(Max)   = '',
+   @PsCla_TipoNom             Varchar(Max)   = '',
+   @PsCla_PerDed              Varchar(Max)   = '',
+   @PsCla_Periodo             Varchar(Max)   = '',
+   @PsNominas                 Varchar(Max)   = '',
    @PnError                   Integer        = 0    Output,
    @PsMensaje                 Varchar( 250)  = Null Output)
 As
@@ -119,7 +122,7 @@ Begin
    Select @w_cla_empresa      = cla_empresa,
           @w_nom_razon_social = Concat(nom_razon_social, ' - ', rfc_emp)
    From   dbo.rh_razon_social
-   Where  cla_razon_social = @PnCla_RazonSocial;
+   Where  cla_razon_social = @PsRazon_Social;
    If @@Rowcount = 0
       Begin
          Select @PnError   = 2,
@@ -133,6 +136,65 @@ Begin
 --
 -- Creación de Tablas Temporales.
 --
+
+
+-- Razón Social.
+
+   Create Table #TempRazon_Social
+  (CLA_RAZON_SOCIAL  Integer      Not Null,
+   NOM_RAZON_SOCIAL  Varchar(300) Not Null,
+   CLA_EMPRESA       Integer      Not Null,
+   Constraint TempRazon_SocialPk
+   Primary Key (CLA_RAZON_SOCIAL, CLA_EMPRESA));
+
+-- Razón Empresa.
+
+   Create Table #TempEmpresa
+  (CLA_RAZON_SOCIAL  Integer      Not Null,
+   CLA_EMPRESA       Integer Not Null,
+   Constraint TempEmpresaPk
+   Primary Key (CLA_EMPRESA, CLA_RAZON_SOCIAL));
+
+-- Tabla Temporal de Ubicación.
+
+   Create Table #tmpUbicacion
+  (CLA_EMPRESA         Integer      Not Null,
+   CLA_UBICACION       Integer      Not Null,
+   NOM_UBICACION       Varchar(100) Not Null,
+   Constraint tmpUbicacionPk
+   Primary Key (CLA_EMPRESA, CLA_UBICACION));
+
+-- Tabla Temporal de Centro de Costo.
+
+   Create Table #tmpCentroCosto
+  (CLA_EMPRESA         Integer      Not Null,
+   CLA_CENTRO_COSTO    Integer      Not Null,
+   NOM_CENTRO_COSTO    Varchar(100) Not Null,
+   Constraint tmpCCPk
+   Primary Key (CLA_EMPRESA, CLA_CENTRO_COSTO));
+
+-- Tabla Temporal de Departamento.
+
+   Create Table #tempDepto
+  (CLA_EMPRESA         Integer       Not Null,
+   CLA_DEPTO           Integer       Not Null,
+   NOM_DEPTO           Varchar(100)  Not Null,
+   Constraint tmpDeptoPk
+   Primary Key (CLA_EMPRESA, CLA_DEPTO));
+
+   Create Table #tempTipoNom
+  (TIPO_NOMINA            Integer       Not Null,
+   NOM_TIPO_NOMINA        Varchar(100)  Not Null,
+   Constraint tempTipoNomPk
+   Primary Key (TIPO_NOMINA));
+
+   Create Table #tempPeriodo
+  (CLA_EMPRESA  Integer       Not Null,
+   CLA_PERIODO  Integer       Not Null,
+   NOM_PERIODO  Varchar(100)  Not Null,
+   Constraint tempPeriodoPk
+   Primary Key (CLA_EMPRESA, CLA_PERIODO));
+   
 
    Create  Table #tmpPerded
   (CLA_EMPRESA       Integer      Not Null,
@@ -156,40 +218,6 @@ Begin
    STRING           Varchar(Max) Not Null,
    Constraint tmpNominasPk
    Primary Key (CLA_EMPRESA, CLA_PERIODO, NUM_NOMINA));
-
-   Create Table #tmpUbicacion
-  (CLA_EMPRESA         Integer      Not Null,
-   CLA_UBICACION       Integer      Not Null,
-   NOM_UBICACION       Varchar(100) Not Null,
-   Constraint tmpUbicacionPk
-   Primary Key (CLA_EMPRESA, CLA_UBICACION));
-
-   Create Table #tmpCentroCosto
-  (CLA_EMPRESA         Integer      Not Null,
-   CLA_CENTRO_COSTO    Integer      Not Null,
-   NOM_CENTRO_COSTO    Varchar(100) Not Null,
-   Constraint tmpCCPk
-   Primary Key (CLA_EMPRESA, CLA_CENTRO_COSTO));
-
-   Create Table #tempDepto
-  (CLA_EMPRESA         Integer       Not Null,
-   CLA_DEPTO           Integer       Not Null,
-   NOM_DEPTO           Varchar(100)  Not Null,
-   Constraint tmpDeptoPk
-   Primary Key (CLA_EMPRESA, CLA_DEPTO));
-
-   Create Table #tempTipoNom
-  (TIPO_NOMINA            Integer       Not Null,
-   NOM_TIPO_NOMINA        Varchar(100)  Not Null,
-   Constraint tempTipoNomPk
-   Primary Key (TIPO_NOMINA));
-
-   Create Table #tempPeriodo
-  (CLA_EMPRESA  Integer       Not Null,
-   CLA_PERIODO  Integer       Not Null,
-   NOM_PERIODO  Varchar(100)  Not Null,
-   Constraint tempPeriodoPk
-   Primary Key (CLA_EMPRESA, CLA_PERIODO));
 
    Create Table #tmpImporteNominas
   (secuencia         Integer        Not Null Identity (1, 1) Primary Key,
@@ -216,6 +244,10 @@ Begin
    SALDO_GRAVADO     Decimal(18, 2) Not Null Default 0,
    Index tmpNominasTrabIdx01 (CLA_EMPRESA, CLA_PERIODO, ANIO_MES, NUM_NOMINA, CLA_PERDED));
 
+--
+-- Tabla de Salida.
+--
+
    Create Table #tmpResultado
   (secuencia           Integer        Not Null Identity (1, 1) Primary Key,
    CLA_UBICACION       Integer        Not Null Default 999999,
@@ -234,15 +266,83 @@ Begin
    PERDED_2            Varchar( 20)       Null Default Char(32),
    NOMDED_2            Varchar( 80)       Null Default Char(32),
    IMPORTE2            Varchar( 20)       Null Default Char(32),
+   SALDO2              Varchar( 20)       Null Default Char(32), 
    PERDED_3            Varchar( 20)       Null Default Char(32),
    NOMDED_3            Varchar( 80)       Null Default Char(32),
-   IMPORTE3            Varchar( 20)       Null Default Char(32))
+   IMPORTE3            Varchar( 20)       Null Default Char(32),
+   SALDO3              Varchar( 20)       Null Default Char(32));
+
+--
+-- Filtro para Consulta de Razon Social.
+--
+
+   If Isnull(@PsRazon_Social, '') = ''
+      Begin
+         Insert Into #TempRazon_Social
+        (CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA)
+         Select CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA
+         From   dbo.rh_razon_social;
+      End
+   Else
+      Begin
+         Insert Into #TempRazon_Social
+        (CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA)
+         Select Distinct b.CLA_RAZON_SOCIAL, b.NOM_RAZON_SOCIAL, b.CLA_EMPRESA
+         From   String_split(@PsRazon_Social, ',') a
+         Join   dbo.rh_razon_social                  b
+         On     b.CLA_RAZON_SOCIAL= a.value;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 1,
+                      @PsMensaje = 'La Lista de Razon social Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
+
+--
+-- Filtro para Consulta de Empresas
+--
+
+   If Isnull(@PsCla_Empresa, '') = ''
+      Begin
+         Insert Into #TempEmpresa
+        (CLA_RAZON_SOCIAL, CLA_EMPRESA)
+         Select Distinct a.CLA_RAZON_SOCIAL, a.CLA_EMPRESA
+         From   dbo.rh_razon_social a 
+         Join   #TempRazon_Social   b 
+         On     b.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
+         And    b.CLA_EMPRESA      = a.CLA_EMPRESA;
+      End
+   Else
+      Begin
+         Insert Into #TempEmpresa
+        (CLA_RAZON_SOCIAL, CLA_EMPRESA)
+         Select Distinct b.CLA_RAZON_SOCIAL, b.CLA_EMPRESA
+         From   String_split(@PsCla_Empresa, ',') a
+         Join   dbo.rh_razon_social               b
+         On     b.CLA_EMPRESA = a.value 
+         Join   #TempRazon_Social   c 
+         On     c.CLA_RAZON_SOCIAL = b.CLA_RAZON_SOCIAL
+         And    c.CLA_EMPRESA      = b.CLA_EMPRESA;
+         If @@Rowcount = 0
+            Begin
+               Select @PnError   = 2,
+                      @PsMensaje = 'La Lista de Empresas Seleccionada no es es Válida'
+
+               Select @PnError IdError, @PsMensaje Error
+               Set Xact_Abort Off
+               Return
+            End
+      End
 
 --
 -- Consulta de Ubicación.
 --
 
-   If @PsCla_Ubicacion Is Null
+   If Isnull(@PsCla_Ubicacion, '') = ''
       Begin
          Insert Into #tmpUbicacion
         (CLA_EMPRESA, CLA_UBICACION, NOM_UBICACION)
@@ -274,7 +374,7 @@ Begin
 -- Consulta de los centros de Costo.
 --
 
-   If @PsCla_CentroCosto Is Null
+   If Isnull(@PsCla_CentroCosto, '') = ''
       Begin
          Insert Into #tmpCentroCosto
         (CLA_EMPRESA, CLA_CENTRO_COSTO, NOM_CENTRO_COSTO)
@@ -306,7 +406,7 @@ Begin
 -- Consulta de los Departamentos
 --
 
-   If @PsCla_Depto Is Null
+   If Isnull(@PsCla_Depto, '') = ''
       Begin
          Insert Into #tempDepto
         (CLA_EMPRESA, CLA_DEPTO, NOM_DEPTO)
@@ -338,7 +438,7 @@ Begin
 -- Consulta de los Tipos de Nomina
 --
 
-   If @PsCla_TipoNom Is Null
+   If Isnull(@PsCla_TipoNom, '') = ''
       Begin
          Insert Into #tempTipoNom
         (TIPO_NOMINA, NOM_TIPO_NOMINA)
@@ -368,14 +468,14 @@ Begin
 -- Consulta de los Períodos de Nomina
 --
 
-   If @PsCla_Periodo Is Null
+   If Isnull(@PsCla_Periodo, '') = ''
       Begin
          Insert Into #tempPeriodo
        (CLA_EMPRESA, CLA_PERIODO, NOM_PERIODO)
          Select CLA_EMPRESA, CLA_PERIODO, NOM_PERIODO
          From   dbo.RH_PERIODO
          Where  CLA_EMPRESA      = @w_cla_empresa
-         And    cla_razon_social = @PnCla_RazonSocial;
+         And    cla_razon_social = @PsRazon_Social;
       End
    Else
       Begin
@@ -386,7 +486,7 @@ Begin
          Join   dbo.RH_PERIODO              b
          On     b.CLA_PERIODO      = a.value
          Where  b.CLA_EMPRESA      = @w_cla_empresa
-         And    b.cla_razon_social = @PnCla_RazonSocial;
+         And    b.cla_razon_social = @PsRazon_Social;
          If @@Rowcount = 0
             Begin
                Select @PnError   = 6,
@@ -402,7 +502,7 @@ Begin
 -- Consulta de conceptos de nómina.
 --
 
-   If @PsCla_PerDed Is Null
+   If Isnull(@PsCla_PerDed, '') = ''
       Begin
          Insert Into #tmpPerded
         (CLA_EMPRESA, CLA_PERDED, NOM_PERDED, TIPO_PERDED)
@@ -421,6 +521,8 @@ Begin
                 3
          From   dbo.RH_PERDED
          Where  CLA_EMPRESA     = @w_cla_empresa
+         And    NO_AFECTAR_NETO = 1
+         And    NO_IMPRIMIR     = 1
          And    ES_PROVISION    = 1
       End
    Else
@@ -462,7 +564,7 @@ Begin
 -- Consulta a las nóminas.
 --
 
-   If @PsNominas Is Null
+   If Isnull(@PsNominas, '') = ''
       Begin
          Insert Into #tmpNominas
          (CLA_EMPRESA,      CLA_PERIODO,      NUM_NOMINA,       ANIO_MES,
@@ -510,6 +612,9 @@ Begin
          Where  t1.CLA_EMPRESA      = @w_CLA_EMPRESA;
       End
 
+--
+-- Inicio de Consulta para el reporte.
+--
    Insert Into #tmpImporteNominas
   (CLA_EMPRESA,     CLA_PERIODO,        NUM_NOMINA,         NOM_UBICACION,
    NOM_DEPTO,       NOM_PERIODO,        ANIO_MES,           INICIO_PER,
@@ -520,10 +625,16 @@ Begin
    Select a.CLA_EMPRESA,         a.CLA_PERIODO,   a.NUM_NOMINA,     b.NOM_UBICACION,
           c.NOM_DEPTO,           d.NOM_PERIODO,   d.ANIO_MES,       d.INICIO_PER,
           d.FIN_PER,             e.CLA_PERDED,    e.NOM_PERDED,     e.TIPO_PERDED,
-          Sum(a.IMPORTE),        0,               Sum(a.GRAV_IMSS), Sum(EXENTO),
+          Sum(a.IMPORTE),        Sum(a.acum),     Sum(a.GRAV_IMSS), Sum(EXENTO),
           Concat(Substring(h.NOM_TIPO_NOMINA, 1, 3), '-', Format(a.CLA_PERIODO, '000')),
           f.NOM_CENTRO_COSTO, b.CLA_UBICACION, f.CLA_CENTRO_COSTO, c.CLA_DEPTO
    From   dbo.RH_DET_REC_HISTO a
+   Join   #TempRazon_Social    T1
+   On     T1.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
+   And    T1.CLA_EMPRESA      = a.cla_empresa
+   Join   #TempEmpresa         T2
+   On     T2.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
+   And    T2.CLA_EMPRESA      = a.cla_empresa
    Join   #tmpUbicacion        b
    On     b.CLA_EMPRESA      = a.CLA_EMPRESA
    And    b.CLA_UBICACION    = a.CLA_UBICACION_BASE
@@ -545,7 +656,7 @@ Begin
    And    g.CLA_PERIODO      = a.CLA_PERIODO
    Join   #tempTipoNom         h
    On     h.TIPO_NOMINA      = d.TIPO_NOMINA
-   Where  a.cla_razon_social = @PnCla_RazonSocial
+   Where  a.cla_razon_social = @PsRazon_Social
    And    a.CLA_EMPRESA      = @w_cla_empresa
    Group  By a.CLA_EMPRESA,      a.CLA_PERIODO,   a.NUM_NOMINA,  b.NOM_UBICACION,
           c.NOM_DEPTO,           d.NOM_PERIODO,   d.ANIO_MES,    d.INICIO_PER,
@@ -555,6 +666,14 @@ Begin
    Order  By b.CLA_UBICACION, f.CLA_CENTRO_COSTO, c.CLA_DEPTO;
    Set @w_registros = @@Rowcount;
 
+   Update #tmpImporteNominas
+   Set    SALDO = 0
+   From   #tmpImporteNominas a
+   Where  Not Exists ( Select Top 1 1
+                       From   dbo.RH_PERDED
+                       Where  CLA_EMPRESA   = a.CLA_EMPRESA
+                       And    CLA_PERDED    = a.CLA_PERDED
+                       And    MOSTRAR_SALDO = 1)
 
    Declare
       C_tipoNom  Cursor For
