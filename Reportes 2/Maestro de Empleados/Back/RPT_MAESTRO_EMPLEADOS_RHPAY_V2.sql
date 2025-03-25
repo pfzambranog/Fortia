@@ -609,9 +609,9 @@ Begin
           T1.FECHA_NAC                  FECHA_NACIMIENTO,
           T1.SEXO                       GENERO,
           dbo.fnNumLetra(T1.SUELDO_MENSUAL,1) SUELDO_LETRA,
-          T7.CLA_TAB_PRE,
-          T7.NOM_TAB_PRE,
-          x.DIAS_VAC VACACIONES, x.DIAS_AGUI AGUINALDO, x.PRIMA_VAC PRIMA_VAC,
+          x.CLA_TAB_PRE,
+          x.NOM_TAB_PRE,
+          x.DIAS_VAC VACACIONES, x.PRIMA_VAC PRIMA_VAC, x.DIAS_AGUI AGUINALDO, 
           dbo.Fn_FDOCJA_AHORRO(T1.CLA_EMPRESA, T1.CLA_TRAB, 2)   FDO_AHORRO,
           dbo.Fn_FDOCJA_AHORRO(T1.CLA_EMPRESA, T1.CLA_TRAB, 3)   CAJA_AHORRO,
           Convert(Varchar,T1.FECHA_BAJA ,103)   FECHA_BAJA,
@@ -712,7 +712,7 @@ Begin
    Join  #TempTrabajador   t19
    On    T1.CLA_TRAB     = T19.CLA_TRAB
    And   T1.CLA_EMPRESA  = T7.CLA_EMPRESA  
-   Join  (Select a.CLA_EMPRESA, a.CLA_TRAB, DIAS_VAC, PRIMA_VAC, DIAS_AGUI
+   Join  (Select a.CLA_EMPRESA, b.CLA_TAB_PRE, b.NOM_TAB_PRE, a.CLA_TRAB, DIAS_VAC, PRIMA_VAC, DIAS_AGUI
           From   RH_TRAB a
           Join   RH_ENC_TAB_PRESTAC b
           On     b.CLA_TAB_PRE = a.CLA_TAB_PRE
