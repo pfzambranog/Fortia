@@ -329,6 +329,7 @@ Begin
    MOSTRAR_SALDO     Integer      Not Null Default 0,
    GRUPO_CAL1        Integer      Not Null Default 1,
    NO_AFECTAR_NETO   Integer      Not Null Default 0,
+   ESBASE_ISPT       Integer      Not Null Default 0,
    Constraint tmpPerdedPk
    Primary Key (CLA_EMPRESA, CLA_PERDED));
 
@@ -1077,14 +1078,15 @@ Begin
    If Isnull(@PsCla_PerDed, '') = ''
       Begin
          Insert Into #tmpPerded
-        (CLA_EMPRESA, CLA_PERDED, NOM_PERDED, TIPO_PERDED, MOSTRAR_SALDO,
-          GRUPO_CAL1, NO_AFECTAR_NETO)
+        (CLA_EMPRESA,   CLA_PERDED, NOM_PERDED,      TIPO_PERDED,
+         MOSTRAR_SALDO, GRUPO_CAL1, NO_AFECTAR_NETO, ESBASE_ISPT)
          Select Distinct a.CLA_EMPRESA, a.CLA_PERDED, Substring(a.NOM_PERDED, 1, 40),
                 Case When TIPO_PERDED = 10
                      Then 1
                      Else 2
                 End, Isnull(a.MOSTRAR_SALDO, 0),
-                Isnull(a.GRUPO_CAL1, 0), Isnull(a.NO_AFECTAR_NETO, 0)
+                Isnull(a.GRUPO_CAL1, 0), Isnull(a.NO_AFECTAR_NETO, 0),
+                Isnull(a.ESBASE_ISPT, 0)
          From   dbo.RH_PERDED  a
          Join   #TmpEmpresa    b
          On     b.CLA_EMPRESA     = a.CLA_EMPRESA
@@ -1094,7 +1096,7 @@ Begin
          Union
          Select Distinct a.CLA_EMPRESA, a.CLA_PERDED, Substring(a.NOM_PERDED, 1, 40),
                 3, Isnull(a.MOSTRAR_SALDO, 0), Isnull(a.GRUPO_CAL1, 0),
-                Isnull(NO_AFECTAR_NETO, 0)
+                Isnull(NO_AFECTAR_NETO, 0),    Isnull(a.ESBASE_ISPT, 0)
          From   dbo.RH_PERDED  a
          Join   #TmpEmpresa    b
          On     b.CLA_EMPRESA     = a.CLA_EMPRESA
@@ -1107,13 +1109,14 @@ Begin
       Begin
          Insert Into #tmpPerded
         (CLA_EMPRESA,   CLA_PERDED, NOM_PERDED, TIPO_PERDED,
-         MOSTRAR_SALDO, GRUPO_CAL1, NO_AFECTAR_NETO)
+         MOSTRAR_SALDO, GRUPO_CAL1, NO_AFECTAR_NETO, ESBASE_ISPT)
          Select Distinct b.CLA_EMPRESA, b.CLA_PERDED, Substring(b.NOM_PERDED, 1, 40),
                 Case When b.TIPO_PERDED = 10
                      Then 1
                      Else 2
                 End, Isnull(b.MOSTRAR_SALDO, 0),
-                Isnull(b.GRUPO_CAL1, 0), Isnull(b.NO_AFECTAR_NETO, 0)
+                Isnull(b.GRUPO_CAL1, 0), Isnull(b.NO_AFECTAR_NETO, 0),
+                Isnull(b.ESBASE_ISPT, 0)
          From   String_split(@PsCla_PerDed, ',') a
          Join   dbo.RH_PERDED                    b
          On     b.cla_perded      = a.value
@@ -1125,7 +1128,8 @@ Begin
          Union
          Select Distinct b.CLA_EMPRESA, b.CLA_PERDED, Substring(b.NOM_PERDED, 1, 40),
                 3, Isnull(b.MOSTRAR_SALDO, 0),
-                Isnull(b.GRUPO_CAL1, 0), Isnull(b.NO_AFECTAR_NETO, 0)
+                Isnull(b.GRUPO_CAL1, 0), Isnull(b.NO_AFECTAR_NETO, 0),
+                Isnull(b.ESBASE_ISPT, 0)
          From   String_split(@PsCla_PerDed, ',') a
          Join   dbo.RH_PERDED                    b
          On     b.cla_perded      = a.value

@@ -71,6 +71,8 @@ Declare
    @w_fechaProc               Varchar( 10),
    @w_fechaProcIni            Date,
    @w_fechaProcFin            Date,
+   @w_fechaInicio             Date,
+   @w_fechaTermino            Date,
    @w_nominas                 Varchar(Max),
    @w_nomina                  Varchar( 10),
    @w_nom_trab                Varchar(300),
@@ -143,9 +145,9 @@ Declare
    @w_saldo_gravado_Empr      Decimal(18, 2),
    @w_saldo_gravado_RZ        Decimal(18, 2),
    @w_saldo_gravado_Total     Decimal(18, 2),
+   @w_imp                     Decimal(18, 2),
    @w_sec_min                 Integer,
    @w_sec_max                 Integer,
-   @w_imp                     Decimal(18, 2),
    @w_fechaHoy                Date,
 --
    @w_fechaNac                Varchar( 10),
@@ -183,7 +185,8 @@ Begin
          @w_AnioMesFin  = Case When Isnull(@PnMesFin, 0) = 0
                                Then (@PnAnio * 100) + @w_MesFin
                                Else (@PnAnio * 100) + @PnMesFin
-                          End;
+                          End,
+         @w_fechaInicio = Convert(Date, '01/', Format(@w_MesIni, ';
 
 
 --
@@ -291,6 +294,8 @@ Begin
    NOM_PERDED        Varchar( 80) Not  Null,
    TIPO_PERDED       Integer      Not Null,
    MOSTRAR_SALDO     INTEGER      Not Null Default 0,
+   NO_AFECTAR_NETO   Integer      Not Null Default 0,
+   ESBASE_ISPT       Integer      Not Null Default 0,
    Constraint tmpPerdedPk
    Primary Key (CLA_EMPRESA, CLA_PERDED));
 
@@ -702,12 +707,14 @@ Begin
    If Isnull(@PsCla_PerDed, '') = ''
       Begin
          Insert Into #tmpPerded
-        (CLA_EMPRESA, CLA_PERDED, NOM_PERDED, TIPO_PERDED, MOSTRAR_SALDO)
+        (CLA_EMPRESA,    CLA_PERDED,      NOM_PERDED, TIPO_PERDED,
+         MOSTRAR_SALDO,  NO_AFECTAR_NETO, ESBASE_ISPT)
          Select Distinct a.CLA_EMPRESA, a.CLA_PERDED, a.NOM_PERDED,
                 Case When TIPO_PERDED = 10
                      Then 1
                      Else 2
-                End, Isnull(a.MOSTRAR_SALDO, 0)
+                End, Isnull(a.MOSTRAR_SALDO, 0), Isnull(a.NO_AFECTAR_NETO, 0),
+                Isnull(a.ESBASE_ISPT, 0)
          From   dbo.RH_PERDED  a
          Join   #TmpEmpresa    b
          On     b.CLA_EMPRESA     = a.CLA_EMPRESA
@@ -716,8 +723,9 @@ Begin
          And    a.ES_PROVISION    = 0
          Union
          Select Distinct a.CLA_EMPRESA, a.CLA_PERDED, a.NOM_PERDED,
-                3, Isnull(a.MOSTRAR_SALDO, 0)
-         From   dbo.RH_PERDED a
+                3, Isnull(a.MOSTRAR_SALDO, 0), Isnull(a.NO_AFECTAR_NETO, 0),
+                Isnull(a.ESBASE_ISPT, 0)
+         From   dbo.RH_PERDED  a
          Join   #TmpEmpresa    b
          On     b.CLA_EMPRESA     = a.CLA_EMPRESA
          Where  a.NO_AFECTAR_NETO = 1
@@ -728,13 +736,14 @@ Begin
    Else
       Begin
          Insert Into #tmpPerded
-        (CLA_EMPRESA,   CLA_PERDED, NOM_PERDED, TIPO_PERDED,
-         MOSTRAR_SALDO)
+        (CLA_EMPRESA,    CLA_PERDED,      NOM_PERDED, TIPO_PERDED,
+         MOSTRAR_SALDO,  NO_AFECTAR_NETO, ESBASE_ISPT)
          Select Distinct b.CLA_EMPRESA, b.CLA_PERDED, b.NOM_PERDED,
                 Case When b.TIPO_PERDED = 10
                      Then 1
                      Else 2
-                End, Isnull(b.MOSTRAR_SALDO, 0)
+                End, Isnull(b.MOSTRAR_SALDO, 0), Isnull(b.NO_AFECTAR_NETO, 0),
+                Isnull(b.ESBASE_ISPT, 0)
          From   String_split(@PsCla_PerDed, ',') a
          Join   dbo.RH_PERDED                    b
          On     b.cla_perded      = a.value
@@ -744,8 +753,9 @@ Begin
          And    b.NO_IMPRIMIR     = 0
          And    b.ES_PROVISION    = 0
          Union
-         Select Distinct b.CLA_EMPRESA, b.CLA_PERDED, b.NOM_PERDED,
-                3, Isnull(b.MOSTRAR_SALDO, 0)
+         Select Distinct b.CLA_EMPRESA,   b.CLA_PERDED, b.NOM_PERDED,
+                3, Isnull(b.MOSTRAR_SALDO, 0), Isnull(b.NO_AFECTAR_NETO, 0),
+                Isnull(b.ESBASE_ISPT, 0)
          From   String_split(@PsCla_PerDed, ',') a
          Join   dbo.RH_PERDED                    b
          On     b.cla_perded      = a.value
@@ -898,7 +908,11 @@ Begin
    Select a.CLA_EMPRESA,         a.CLA_PERIODO,   a.NUM_NOMINA,     b.NOM_UBICACION,
           c.NOM_DEPTO,           d.NOM_PERIODO,   d.ANIO_MES,       d.INICIO_PER,
           d.FIN_PER,             e.CLA_PERDED,    e.NOM_PERDED,     e.TIPO_PERDED,
-          Sum(a.IMPORTE),        Sum(a.acum),     Sum(a.GRAV_IMSS), Sum(EXENTO),
+          Sum(a.IMPORTE),        Sum(a.acum),     0 SALDO_GRAVADO,
+          Sum(Case When ESBASE_ISPT = 1
+                   Then a.EXENTO
+                   Else 0
+              End) SALDO_EXENTO,
           Concat(Substring(h.NOM_TIPO_NOMINA, 1, 3), '-', Format(a.CLA_PERIODO, '000')),
           f.NOM_CENTRO_COSTO,  b.CLA_UBICACION, f.CLA_CENTRO_COSTO, c.CLA_DEPTO,
           T1.CLA_RAZON_SOCIAL, T1.nom_razon_social, a.CLA_TRAB,     i.NOM_TRAB,
@@ -957,6 +971,15 @@ Begin
                        And    CLA_PERDED    = a.CLA_PERDED
                        And    MOSTRAR_SALDO = 1)
 
+   Update #tmpImporteNominas
+   Set    SALDO_GRAVADO = importe - Isnull(SALDO_EXENTO, 0)
+   From   #tmpImporteNominas a
+   Where  Exists ( Select Top 1 1
+                   From   #tmpPerded
+                   Where  CLA_EMPRESA   = a.CLA_EMPRESA
+                   And    CLA_PERDED    = a.CLA_PERDED
+                   And    ESBASE_ISPT   = 1);
+                       
    Select @w_fechaProcIni    = Min(INICIO_PER),
           @w_fechaProcFin    = Max(FIN_PER)
    From   #tmpImporteNominas;
@@ -989,8 +1012,6 @@ Begin
      Close      C_tipoNom
      Deallocate C_tipoNom
    End
-
-
 
 --
 -- Carga de Cifras

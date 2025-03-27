@@ -1,4 +1,4 @@
-ALter PROCEDURE dbo.sp_alta_saldos_vacaciones
+Alter PROCEDURE dbo.sp_alta_saldos_vacaciones
  @compania                CHAR(04)      = '',
  @trabajador              CHAR(10)      = '',
  @campo_ciclo             CHAR(08)      = '',
@@ -9,7 +9,7 @@ ALter PROCEDURE dbo.sp_alta_saldos_vacaciones
  @vac_disfrutadas         SMALLINT      = 0,
  @vac_programadas         SMALLINT      = 0,
  @vac_vencidas            SMALLINT      = 0,
- @fecha_actual            DATETIME      = 0,
+ @fecha_actual            DATE          = Null,
  @masivo                  SMALLINT      = 0,
  @status_err              TINYINT       = 0,
  @param_generacion        CHAR(1)       = ''
@@ -88,7 +88,7 @@ BEGIN
   --     SET @status_err = 4
   --  End
 
-   
+
   IF (@status_err <> 4)
   BEGIN
    IF EXISTS( SELECT 1
@@ -113,68 +113,70 @@ BEGIN
 
 
    IF EXISTS(SELECT 1
-    FROM  saldos_vacaciones
-    WHERE  compania   = @compania
-    AND  trabajador = @trabajador)
-   BEGIN
-    IF NOT EXISTS(SELECT 1
-     FROM  saldos_vacaciones
-     WHERE  compania      = @compania
-     AND  trabajador    = @trabajador
-     AND  ciclo_laboral = @ant_campo_ciclo )
-    BEGIN
-     SET @status_err = 4
-
-     IF @masivo = 1
-     BEGIN
-      RAISERROR 20001 'No se pueden insertar periodos laborales discontinuos. '
-      RETURN 1
-     END
-     ELSE
-     BEGIN
-      INSERT INTO err_proc_vacaciones
-      VALUES (@compania,@trabajador,@campo_ciclo,1)
-     END
-    END
-   END
-   ELSE
-   BEGIN
-    IF EXISTS(SELECT 1
-     FROM  historico_saldos_vac
-     WHERE  compania   = @compania
-     AND  trabajador = @trabajador)
-    BEGIN
-     DECLARE cur_hist_ciclo CURSOR FOR
-     SELECT  ciclo_laboral
-     FROM  historico_saldos_vac
-     WHERE  compania   = @compania
-     AND  trabajador = @trabajador
-
-     OPEN  cur_hist_ciclo
-     FETCH  cur_hist_ciclo
-     INTO  @ciclo
-     WHILE @@FETCH_STATUS = 0
-     BEGIN
-      FETCH cur_hist_ciclo INTO @ciclo
-     END
-
-     CLOSE cur_hist_ciclo
-     DEALLOCATE cur_hist_ciclo
-
-     IF (@ciclo IS NOT NULL)
-     BEGIN
-      SET @camp  = CONVERT(CHAR(04),@ciclo)
-      SET @camp3 = CONVERT(SMALLINT,(CONVERT(SMALLINT,@camp) + 1))
-      SET @camp4 = @camp3 + 1
-
-      SET @ciclo_after_his = CONVERT(CHAR(08),(CONVERT(CHAR(04),@camp3) + (CONVERT(CHAR(04),@camp4))))
-
-      IF NOT EXISTS (SELECT 1
-       FROM  SALDOS_VACACIONES
-       WHERE  compania      = @compania
-       AND  trabajador    = @trabajador
-       AND  ciclo_laboral = @ciclo_after_his)
+             FROM   saldos_vacaciones
+             WHERE  compania   = @compania
+             AND    trabajador = @trabajador)
       BEGIN
+         IF NOT EXISTS(SELECT 1
+                       FROM  saldos_vacaciones
+                       WHERE  compania      = @compania
+                       AND  trabajador    = @trabajador
+                       AND  ciclo_laboral = @ant_campo_ciclo )
+            BEGIN
+               SET @status_err = 4
+
+               IF @masivo = 1
+                  BEGIN
+                     RAISERROR 20001 'No se pueden insertar periodos laborales discontinuos. '
+                     RETURN 1
+                  END
+               ELSE
+                  BEGIN
+                     INSERT INTO err_proc_vacaciones
+                     VALUES (@compania,@trabajador,@campo_ciclo,1)
+                  END
+            END
+      END
+   ELSE
+      Begin
+
+         IF EXISTS(SELECT 1
+                   FROM    historico_saldos_vac
+                   WHERE  compania   = @compania
+                   AND     trabajador = @trabajador)
+            BEGIN
+               DECLARE cur_hist_ciclo CURSOR FOR
+               SELECT  ciclo_laboral
+               FROM  historico_saldos_vac
+               WHERE  compania   = @compania
+               AND  trabajador = @trabajador
+
+               OPEN  cur_hist_ciclo
+               FETCH  cur_hist_ciclo
+               INTO  @ciclo
+               WHILE @@FETCH_STATUS = 0
+               BEGIN
+                  FETCH cur_hist_ciclo INTO @ciclo
+               END
+
+               CLOSE cur_hist_ciclo
+               DEALLOCATE cur_hist_ciclo
+
+
+               IF (@ciclo IS NOT NULL)
+                   BEGIN
+                      SET @camp  = CONVERT(CHAR(04),@ciclo)
+                      SET @camp3 = CONVERT(SMALLINT,(CONVERT(SMALLINT,@camp) + 1))
+                      SET @camp4 = @camp3 + 1
+
+                      SET @ciclo_after_his = CONVERT(CHAR(08),(CONVERT(CHAR(04),@camp3) + (CONVERT(CHAR(04),@camp4))))
+
+                      IF NOT EXISTS (SELECT 1
+                                     FROM  SALDOS_VACACIONES
+                                     WHERE  compania      = @compania
+                                     AND  trabajador    = @trabajador
+                                     AND  ciclo_laboral = @ciclo_after_his)
+                         BEGIN
        IF (@ciclo_after_his <> @campo_ciclo)
        BEGIN
         SET @status_err = 4
@@ -195,6 +197,8 @@ BEGIN
     END
    END
 
+
+
    IF (@fecha_cad_prog_vac < @fecha_actual)
     SET @situacion_ciclo = 2  /* Ciclo Inactivo */
    ELSE
@@ -205,10 +209,12 @@ BEGIN
    WHERE  compania     = @compania
    AND  parametro_cv = 'Var_antig'
 
+
    SELECT  @sistema_antiguedad = sistema_antiguedad
    FROM  trabajadores_grales
    WHERE  compania   = @compania
    AND  trabajador = @trabajador
+
 
    IF (@sistema_antiguedad IS NULL)
    BEGIN
@@ -226,34 +232,39 @@ BEGIN
     END
    END
 
+
    IF @status_err <> 4
-   BEGIN
-    IF NOT EXISTS(SELECT 1
-     FROM  sistemas_antiguedad
-     WHERE  sistema_antiguedad = @sistema_antiguedad)
-    BEGIN
+      BEGIN
+         IF NOT EXISTS(SELECT top 1 1
+                       FROM  sistemas_antiguedad
+                       WHERE  sistema_antiguedad = @sistema_antiguedad)
+            BEGIN
+               SET @status_err = 4
 
-     SET @status_err = 4
-
-     IF @masivo = 1
-     BEGIN
-      RAISERROR 20001 'El Sistema de Antiguedad no existe o no tiene rangos definidos. '
-      RETURN 1
-     END
-     ELSE
-     BEGIN
-      INSERT INTO err_proc_vacaciones
-      VALUES (@compania, @trabajador, @campo_ciclo, 5)
-     END
-    END
+               IF @masivo = 1
+                  BEGIN
+                     RAISERROR 20001 'El Sistema de Antiguedad no existe o no tiene rangos definidos. '
+                     RETURN 1
+                  END
+               ELSE
+                  BEGIN
+                     INSERT INTO err_proc_vacaciones
+                     VALUES (@compania, @trabajador, @campo_ciclo, 5)
+                  END
+            END
 
 
-    SELECT  @fecha_antiguedad = fecha_antiguedad
-    FROM  trabajadores_grales
-    WHERE  trabajador = @trabajador
-    AND  compania   = @compania
+        SELECT  @fecha_antiguedad = fecha_antiguedad
+        FROM    trabajadores_grales
+        WHERE   trabajador = @trabajador
+        AND     compania   = @compania
 
-    SET @rango = DATEDIFF(YY, @fecha_antiguedad, @fecha_ini_prog_vac)
+       SET @rango = Datediff(YY, @fecha_antiguedad, @fecha_ini_prog_vac)
+
+       If @fecha_ini_prog_vac > @fecha_antiguedad
+          Begin
+             Set @fecha_ini_prog_vac = @fecha_antiguedad
+          End
 
     SET @w_sql2 = 'SELECT @w_no_dias_ano = variable_sa_' + SUBSTRING(@var_antiguedad, 9, 2)
     SET @w_sql2 = @w_sql2 + ' FROM sistemas_ant_rangos '
@@ -263,7 +274,6 @@ BEGIN
     SET @ParmDefinition = '@w_no_dias_ano INT OUTPUT'
 
     EXECUTE sp_executesql @w_sql2, @ParmDefinition, @w_no_dias_ano = @no_dias_ano OUTPUT
-
 
     IF ((@no_dias_ano IS NULL))
     BEGIN
@@ -301,7 +311,7 @@ BEGIN
        situacion_ciclo,
        dias_lab,
        dias_no_lab)
-      VALUES (@compania,
+       VALUES (@compania,
        @trabajador,
        @campo_ciclo,
        @fecha_ini_prog_vac,
@@ -346,3 +356,4 @@ BEGIN
 
  END
 END
+Go
