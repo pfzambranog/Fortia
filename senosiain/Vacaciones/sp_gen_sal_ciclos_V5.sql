@@ -1,9 +1,9 @@
 Alter PROCEDURE dbo.sp_gen_sal_ciclos_V5  
  @compania         CHAR(04)      = '',  
  @trabajador       CHAR(10)      = '',  
- @ciclo_laboral    SMALLINT      = 0,  /* parametros */  
- @no_ciclos        SMALLINT      = 0,  
- @fecha_generacion DATETIME      = '',  
+ @ciclo_laboral    Smallint      = 0,  /* parametros */  
+ @no_ciclos        Smallint      = 0,  
+ @fecha_generacion Datetime      = '',  
  @param_generacion CHAR(01)      = '',  
  @contador         TINYINT       = 0  
   
@@ -14,29 +14,29 @@ AS
   @campo_ciclo       CHAR(08),  
   @campo0            CHAR(04),  
   @campo1            CHAR(04),  
-  @campo2            SMALLINT,  
-  @campo3            SMALLINT,  
-  @gen               SMALLINT,  
-  @gen2              SMALLINT,  
+  @campo2            Smallint,  
+  @campo3            Smallint,  
+  @gen               Smallint,  
+  @gen2              Smallint,  
   @gen3              CHAR(01),  
   @gen4              CHAR(02),  
   @gen5              CHAR(01),  
   @gen6              CHAR(02),  
-  @fecha_antiguedad  SMALLDATETIME,  
-  @fecha2_antiguedad SMALLDATETIME,  
-  @fecha_actual      DATETIME,  
-  @fecha_ingreso     SMALLDATETIME,  
-  @fecha_paso        DATETIME,  
-  @ano_actual        SMALLINT,  
-  @ano_generacion    SMALLINT,  
-  @ano_fec_antig     SMALLINT,  
-  @fin_generacion    SMALLINT,  
-  @sit_trabajador    SMALLINT,  
-  @ciclo_laboral2    SMALLINT,  
-  @masivo            SMALLINT,  
-  @status            SMALLINT,  
-  @caducidad         DECIMAL(16,8),  
-  @w_programa_sus    VARCHAR(30)  
+  @fecha_antiguedad  Datetime,  
+  @fecha2_antiguedad Datetime,  
+  @fecha_actual      Datetime,  
+  @fecha_ingreso     Datetime,  
+  @fecha_paso        Datetime,  
+  @ano_actual        Smallint,  
+  @ano_generacion    Smallint,  
+  @ano_fec_antig     Smallint,  
+  @fin_generacion    Smallint,  
+  @sit_trabajador    Smallint,  
+  @ciclo_laboral2    Smallint,  
+  @masivo            Smallint,  
+  @status            Smallint,  
+  @caducidad         Decimal(16,8),  
+  @w_programa_sus    Varchar(30)  
   
 BEGIN  
  EXECUTE sp_programas_remplazo @compania, 'sp_gen_sal_ciclos_V5', @w_programa_sus OUTPUT  
@@ -72,7 +72,7 @@ BEGIN
           @ciclo_laboral2    = 0,  
           @masivo            = @contador,  
           @status            = 0,  
-   @caducidad         = 0  
+          @caducidad         = 0  
   
   IF @masivo < 2  
   BEGIN  
@@ -148,7 +148,7 @@ BEGIN
    SET @ciclo_laboral2 = @ciclo_laboral  
   
    SET @campo0 = CONVERT(CHAR(04), @ciclo_laboral2)  
-   SET @campo2 = CONVERT(SMALLINT, @campo0)  
+   SET @campo2 = CONVERT(Smallint, @campo0)  
   
    SET @campo2 = @campo2 + 1  
    SET @campo1 = CONVERT(CHAR(04), @campo2)  
