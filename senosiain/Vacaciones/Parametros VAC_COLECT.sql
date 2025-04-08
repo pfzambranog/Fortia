@@ -1,30 +1,30 @@
 --
--- Objetivo:   Actualizar los parámetros de Vacaciones Colectivas.
+-- Objetivo:  Actualizar los parámetros de Vacaciones Colectivas.
 -- Elaborado: RH Pay Solutions.
 -- Fecha:     27-03-2025
 --
- 
+
 Declare
    @w_compania      Char( 4),
    @w_parametro_rh  Char(10),
    @w_secuencia1    Integer,
    @w_secuencia2    Integer,
-   @w_secuencia3   Integer,
+   @w_secuencia3    Integer,
    @w_meses         Integer,
    @w_fecha2        Date,
    @w_fecha3        Date;
 
 Begin
    Set nocount On
-   
+
    Select @w_compania     = 'LS',
           @w_parametro_rh = 'VAC_COLECT',
           @w_secuencia1   = 1,
           @w_secuencia2   = 2,
           @w_secuencia3   = 3,
-          @w_meses        = 12,  -- Meses de Vigencia
-          @w_fecha2       = '2025-04-17',
-          @w_fecha3       = '2025-12-23';           
+          @w_meses        = 12,            -- Meses de Vigencia
+          @w_fecha2       = '2025-04-14',  -- Fecha Inicio de Semana Santa.
+          @w_fecha3       = '2025-12-24';  -- Fecha Inicio de Navidad.
 
 --
 -- Secuencia 1 = Meses de Caducidad de Ciclo Vacacional para Vacaciones Colectivas.
