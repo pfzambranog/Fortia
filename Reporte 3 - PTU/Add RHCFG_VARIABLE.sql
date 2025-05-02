@@ -140,6 +140,17 @@ Begin
                        And    cla_empresa       = a.cla_empresa
                        And    VALOR_VAR_USUARIO = a.cla_perded);
 
+
+   Update dbo.RH_VAR_USUARIO
+   SET    VALOR_VAR_USUARIO = 202401
+   FROM   dbo.RH_VAR_USUARIO
+   WHERE  CLA_VAR = '$in_GS_PTU'
+
+   Update dbo.RH_VAR_USUARIO
+   SET    VALOR_VAR_USUARIO = 202412
+   FROM   dbo.RH_VAR_USUARIO
+   WHERE  CLA_VAR = '$fi_GS_PTU'
+
    Return
 
 End

@@ -95,6 +95,17 @@ Declare
    @w_nom_depto_ante          Varchar( 80),
    @w_nom_perded              Varchar( 40),
    @w_cla_perded              Varchar( 20),
+   @w_cla_puesto              Varchar( 10),
+   @w_NOM_PUESTO              Varchar( 80),
+   @w_NSS                     Varchar( 20),
+   @w_nss_ante                Varchar( 20),
+   @w_RFC                     Varchar( 20),
+   @w_rfc_ante                Varchar( 20),
+   @w_NOM_PERIODO             Varchar(150),
+   @w_tipo_companiero         Varchar( 50),
+   @w_tipo_companiero_ante    Varchar( 50),
+   @w_inicio_per              Varchar( 10),
+   @w_fin_per                 Varchar( 10),
    @w_nominas                 Varchar(Max),
    @w_sql                     Varchar(Max),
    @w_columnas                Varchar(Max),
@@ -103,6 +114,10 @@ Declare
    @w_insert                  Varchar(Max),
    @w_inicial                 Varchar(Max),
    @w_select                  Varchar(Max),
+   @w_suma_Percepciones       Varchar(Max),
+   @w_suma_Deducciones        Varchar(Max),
+   @w_suma_Provisiones        Varchar(Max),
+   @w_nom_tipo_nomina         Varchar(Max),
    @w_cla_razon_social        Integer,
    @w_cla_razon_social_ante   Integer,
    @w_cla_empresa             Integer,
@@ -115,8 +130,6 @@ Declare
    @w_cla_centro_costo_ante   Integer,
    @w_cla_depto               Integer,
    @w_cla_depto_ante          Integer,
-   @w_cla_puesto              Varchar( 10),
-   @w_NOM_PUESTO              Varchar( 80),
    @w_Error                   Integer,
    @w_secuencia               Integer,
    @w_registros               Integer,
@@ -127,31 +140,25 @@ Declare
    @w_reg                     Integer,
    @w_secFin                  Integer,
    @w_anio_mes                Integer,
-   @w_horaProceso             Char(20),
-   @w_comilla                 Char( 1),
-   @w_inicio                  Bit,
    @w_regRZ                   Integer,
    @w_regEmpr                 Integer,
    @w_regUbic                 Integer,
    @w_regCCO                  Integer,
    @w_regDpto                 Integer,
-   @w_importe                 Decimal(18, 2),
+   @w_CLA_PERIODO             Integer,
+   @w_NUM_NOMINA              Integer,
+   @w_idTabla                 Integer,
+   @w_tipo_perded             Integer,
+   @w_tipo_perdedAnte         Integer,
+   @w_horaProceso             Char(20),
+   @w_comilla                 Char( 1),
+   @w_inicio                  Bit,
    @w_FECHA_ING               Date,
    @w_fecha_ing_ante          Date,
    @w_FECHA_ING_GRUPO         Date,
    @w_fecha_ing_grupo_ante    Date,
    @w_fechaHoy                Date,
-   @w_NSS                     Varchar(20),
-   @w_nss_ante                Varchar(20),
-   @w_RFC                     Varchar(20),
-   @w_rfc_ante                Varchar(20),
-   @w_CLA_PERIODO             Integer,
-   @w_NUM_NOMINA              Integer,
-   @w_NOM_PERIODO             Varchar(150),
-   @w_tipo_companiero         Varchar( 50),
-   @w_tipo_companiero_ante    Varchar( 50),
-   @w_inicio_per              Varchar( 10),
-   @w_fin_per                 Varchar( 10),
+   @w_importe                 Decimal(18, 2),
    @w_sue_dia                 Decimal(18, 2),
    @w_sue_dia_ante            Decimal(18, 2),
    @w_sue_int                 Decimal(18, 2),
@@ -164,8 +171,6 @@ Declare
    @w_tot_neto_ante           Decimal(18, 2),
    @w_dias_por_pagar          Decimal(18, 2),
    @w_dias_por_pagar_ante     Decimal(18, 2),
-   @w_nom_tipo_nomina         Varchar(Max),
-   @w_idTabla                 Integer,
    @w_columna                 Sysname,
    @w_idSession               Nvarchar(Max);
 
@@ -175,37 +180,38 @@ Begin
    Set Ansi_Nulls    Off
    Set Ansi_Warnings On
 
-   Select @PnError         = 0,
-          @w_registros     = 0,
-          @w_secuencia     = 0,
-          @w_inicio        = 1,
-          @w_nominas       = '',
-          @w_columnas      = '',
-          @w_colsuma       = '',
-          @w_executeInsert = '',
-          @w_idSession     = Cast(Newid() As nvarchar(Max)),
-          @w_comilla       = Char(39),
-          @w_fechaHoy      = Getdate(),
-          @PsMensaje       = 'Proceso Terminado Ok',
-          @w_tituloRep     = 'NOMINA POR UBICACION, C.COSTO Y DEPARTAMENTO',
-          @w_fechaProc     = Convert(Char(10), Getdate(), 103),
-          @w_horaProceso   = Format(Getdate(), 'hh:mm:ss tt'),
-          @w_MesIni        = Case When Isnull(@PnMesIni, 0) = 0
-                                 Then 1
-                                 Else @PnMesIni
-                            End,
-          @w_mesFin       = Case When Isnull(@PnMesFin, 0) = 0
-                                 Then 12
-                                 Else @PnMesFin
-                            End,
-          @w_AnioMesIni   = Case When Isnull(@PnMesIni, 0) = 0
-                                 Then (@PnAnio * 100) + @w_MesIni
-                                 Else (@PnAnio * 100) + @PnMesIni
-                            End,
-         @w_AnioMesFin    = Case When Isnull(@PnMesFin, 0) = 0
-                                 Then (@PnAnio * 100) + @w_MesFin
-                                 Else (@PnAnio * 100) + @PnMesFin
-                            End;
+   Select @PnError           = 0,
+          @w_registros       = 0,
+          @w_secuencia       = 0,
+          @w_inicio          = 1,
+          @w_tipo_perdedAnte = 0,
+          @w_nominas         = '',
+          @w_columnas        = '',
+          @w_colsuma         = '',
+          @w_executeInsert   = '',
+          @w_idSession       = Cast(Newid() As nvarchar(Max)),
+          @w_comilla         = Char(39),
+          @w_fechaHoy        = Getdate(),
+          @PsMensaje         = 'Proceso Terminado Ok',
+          @w_tituloRep       = 'NOMINA POR UBICACION, C.COSTO Y DEPARTAMENTO',
+          @w_fechaProc       = Convert(Char(10), Getdate(), 103),
+          @w_horaProceso     = Format(Getdate(), 'hh:mm:ss tt'),
+          @w_MesIni          = Case When Isnull(@PnMesIni, 0) = 0
+                                   Then 1
+                                   Else @PnMesIni
+                               End,
+          @w_mesFin          = Case When Isnull(@PnMesFin, 0) = 0
+                                    Then 12
+                                    Else @PnMesFin
+                               End,
+          @w_AnioMesIni      = Case When Isnull(@PnMesIni, 0) = 0
+                                    Then (@PnAnio * 100) + @w_MesIni
+                                    Else (@PnAnio * 100) + @PnMesIni
+                               End,
+         @w_AnioMesFin       = Case When Isnull(@PnMesFin, 0) = 0
+                                    Then (@PnAnio * 100) + @w_MesFin
+                                    Else (@PnAnio * 100) + @PnMesFin
+                               End;
 
 --
 -- Creación de Tablas Temporales.
@@ -674,6 +680,12 @@ Begin
    Select 'CLA_PUESTO'
    Union
    Select 'CLA_PERIODO'
+   Union
+   Select 'totalPercepciones'
+   Union
+   Select 'totalDeducciones'
+   Union
+   Select 'TOTALPROVISIONES';
 
 --
 -- Filtro de Consulta de Razon Social.
@@ -951,7 +963,7 @@ Begin
          From   String_split(@PsCla_RegImss, ',') a
          Join   dbo.RH_REG_IMSS                   b
          On     b.CLA_REG_IMSS = @PsCla_RegImss
-         Join   #TmpEmpresa     c
+         Join   #TmpEmpresa                       c
          On     c.CLA_EMPRESA     = b.CLA_EMPRESA
          Order  By 1;
          Set @w_reg = @@Rowcount
@@ -983,7 +995,7 @@ Begin
         (TIPO_NOMINA, NOM_TIPO_NOMINA)
          Select Distinct b.TIPO_NOMINA, b.NOM_TIPO_NOMINA
          From   String_split(@PsCla_TipoNom, ',') a
-         Join   dbo.RH_TIPO_NOMINA               b
+         Join   dbo.RH_TIPO_NOMINA                b
          On     b.TIPO_NOMINA      = a.value;
          If @@Rowcount = 0
             Begin
@@ -1018,7 +1030,7 @@ Begin
          From   String_split(@PsCla_Periodo, ',') a
          Join   dbo.RH_PERIODO                    b
          On     b.CLA_PERIODO      = a.value
-         Join   #TmpEmpresa                        c
+         Join   #TmpEmpresa                       c
          On     c.CLA_RAZON_SOCIAL = b.CLA_RAZON_SOCIAL
          And    c.CLA_EMPRESA      = b.CLA_EMPRESA;
          If @@Rowcount = 0
@@ -1043,7 +1055,8 @@ Begin
          Select distinct a.STATUS_NOMINA
          From   dbo.RH_FECHA_PER a
          Join   #TmpEmpresa     b
-         On     b.CLA_EMPRESA = a.CLA_EMPRESA
+         On     b.CLA_EMPRESA     = a.CLA_EMPRESA
+         Where  a.anio_mes  Between @w_AnioMesIni And @w_AnioMesFin
          Order  By 1;
       End
    Else
@@ -1056,6 +1069,7 @@ Begin
          On     b.STATUS_NOMINA = a.value
          Join   #TmpEmpresa     c
          On     c.CLA_EMPRESA = b.CLA_EMPRESA
+         Where  b.anio_mes  Between @w_AnioMesIni And @w_AnioMesFin
          Order  By 1;
 
         If @@Rowcount = 0
@@ -1185,7 +1199,8 @@ Begin
          Join   #TmpEmpresa      t3
          On     t3.CLA_EMPRESA      = t1.CLA_EMPRESA
          Join   #TmpTipoNom      t4
-         On     t4.TIPO_NOMINA      = t1.TIPO_NOMINA;
+         On     t4.TIPO_NOMINA      = t1.TIPO_NOMINA
+         Where  t1.Anio_Mes    Between @w_AnioMesIni And @w_AnioMesFin;;
       End
    Else
       Begin
@@ -1206,7 +1221,8 @@ Begin
          Join   #TmpEmpresa                   t3
          On     t3.CLA_EMPRESA = t1.CLA_EMPRESA
          Join   #TmpTipoNom        t4
-         On     t4.TIPO_NOMINA      = t1.TIPO_NOMINA;
+         On     t4.TIPO_NOMINA       = t1.TIPO_NOMINA
+         Where  t1.Anio_Mes    Between @w_AnioMesIni And @w_AnioMesFin;
          If @@Rowcount = 0
             Begin
                Select @PnError   = 10,
@@ -1341,84 +1357,90 @@ Begin
 -- Inicio de Consulta para el reporte.
 --
 
-   Insert Into #tmpNominasTrab
-  (CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA,      NOM_EMPRESA,
-   CLA_TRAB,         NOM_TRAB,         FECHA_ING,        FECHA_ING_GRUPO,
-   NSS,              RFC,              CLA_PERIODO,      NUM_NOMINA,
-   CLA_UBICACION,    NOM_UBICACION,    CLA_CENTRO_COSTO, NOM_CENTRO_COSTO,
-   CLA_DEPTO,        NOM_DEPTO,        CLA_PUESTO,       NOM_PUESTO,
-   NOM_PERIODO,      TIPO_COMPANIERO,  ANIO_MES,         INICIO_PER,
-   FIN_PER,          SUE_DIA,          SUE_INT,          TOT_PER,
-   TOT_DED,          TOT_NETO,         DIAS_POR_PAGAR,   NOM_TIPO_NOMINA,
-   CLA_PERDED,       NOM_PERDED,       Importe,          FECHA_NACIMIENTO,
-   EDAD)
-   Select t2.CLA_RAZON_SOCIAL, trz.NOM_RAZON_SOCIAL, t2.CLA_EMPRESA,      te.NOM_EMPRESA,
-          t2.cla_trab,         t3.NOM_TRAB,          t3.FECHA_ING,        t3.FECHA_ING_GRUPO,
-          t3.nss,              t3.RFC,               T1.CLA_PERIODO,      t1.NUM_NOMINA,
-          t3.CLA_UBICACION,    t5.NOM_UBICACION,     t3.CLA_CENTRO_COSTO, t6.NOM_CENTRO_COSTO,
-          t3.CLA_DEPTO,        t7.NOM_DEPTO,         t3.CLA_PUESTO,       t13.NOM_PUESTO,
-          t1.NOM_PERIODO,      t3.SINDICALIZADO,     T2.ANIO_MES,         Convert(Varchar(10), T1.INICIO_PER,103),
-          Convert(Varchar(10), T1.FIN_PER,103),      t2.SUE_DIA,          t2.SUE_INT,
-          t2.TOT_PER,          t2.TOT_DED,           t2.TOT_NETO,         Isnull(t99.DIAS_POR_PAGAR, 0),
-          t1.NOM_TIPO_NOMINA,  tr.CLA_PERDED,        tp.NOM_PERDED,       Sum(tr.importe),
-          t3.FECHA_NACIMIENTO, t3.EDAD
-   From   #tmpNominas          t1
-   Join   dbo.RH_ENC_REC_HISTO t2
-   On     t2.ANIO_MES          = t1.ANIO_MES
-   And    t2.CLA_EMPRESA       = t1.CLA_EMPRESA
-   And    t2.CLA_PERIODO       = t1.CLA_PERIODO
-   And    t2.NUM_NOMINA        = t1.NUM_NOMINA
-   Join   dbo.RH_DET_REC_HISTO TR
-   On     tr.CLA_TRAB          = t2.CLA_TRAB
-   And    Tr.CLA_EMPRESA       = t2.CLA_EMPRESA
-   And    tr.ANIO_MES          = t2.ANIO_MES
-   And    Tr.NUM_NOMINA        = t2.NUM_NOMINA
-   And    Tr.CLA_PERIODO       = t2.CLA_PERIODO
-   Join   #TmpRazon_Social     Trz
-   On     trz.CLA_RAZON_SOCIAL = t2.CLA_RAZON_SOCIAL
-   And    trz.CLA_EMPRESA      = t2.CLA_RAZON_SOCIAL
-   Join   #TmpEmpresa          te
-   On     te.CLA_RAZON_SOCIAL = t2.CLA_RAZON_SOCIAL
-   And    te.CLA_EMPRESA      = t2.CLA_EMPRESA
-   Join   #TmpTrabajador       t3
-   On     t3.CLA_EMPRESA      = t2.CLA_EMPRESA
-   And    t3.CLA_TRAB         = t2.CLA_TRAB
-   Join   #tmpRegImss           t4
-   On     t4.CLA_EMPRESA      = t2.CLA_EMPRESA
-   And    t4.CLA_REG_IMSS     = t2.CLA_REG_IMSS
-   Join   #tmpUbicacion        t5
-   On     t5.CLA_EMPRESA      = t3.CLA_EMPRESA
-   And    t5.CLA_UBICACION    = t3.CLA_UBICACION
-   Join   #tmpCentroCosto       t6
-   On     t6.CLA_EMPRESA      = t3.CLA_EMPRESA
-   And    t6.CLA_CENTRO_COSTO = t3.CLA_CENTRO_COSTO
-   Join   #tmpDepto            t7
-   On     t7.CLA_EMPRESA      = t3.CLA_EMPRESA
-   And    t7.CLA_DEPTO        = t3.CLA_DEPTO
-   Join   #tmpPerded           tp
-   On     tp.Cla_Empresa      = tr.CLA_EMPRESA
-   And    tp.CLA_PERDED       = tr.CLA_PERDED
-   Left   Join  #tmpPuesto     t13
-   On     t13.CLA_EMPRESA     = t3.CLA_EMPRESA
-   And    t13.CLA_PUESTO      = t3.CLA_PUESTO
-   Left   Join  #TmpDIAS_POR_PAGAR T99
-   On     t99.CLA_EMPRESA     = t2.CLA_EMPRESA
-   And    t99.CLA_TRAB        = t2.CLA_TRAB
-   And    t99.ANIO_MES        = t2.ANIO_MES
-   And    t99.CLA_PERIODO     = t2.CLA_PERIODO
-   And    t99.NUM_NOMINA      = t2.NUM_NOMINA
-   Group  By t2.CLA_RAZON_SOCIAL, trz.NOM_RAZON_SOCIAL, t2.CLA_EMPRESA,      te.NOM_EMPRESA,
-             t2.cla_trab,         t3.NOM_TRAB,          t3.FECHA_ING,        t3.FECHA_ING_GRUPO,
-             t3.nss,              t3.RFC,               T1.CLA_PERIODO,      t1.NUM_NOMINA,
-             t3.CLA_UBICACION,    t5.NOM_UBICACION,     t3.CLA_CENTRO_COSTO, t6.NOM_CENTRO_COSTO,
-             t3.CLA_DEPTO,        t7.NOM_DEPTO,         t3.CLA_PUESTO,       t13.NOM_PUESTO,
-             t1.NOM_PERIODO,      t3.SINDICALIZADO,     T2.ANIO_MES,         Convert(Varchar(10), T1.INICIO_PER,103),
-             Convert(Varchar(10), T1.FIN_PER,103),
-             t2.SUE_DIA,          t2.SUE_INT,           t2.TOT_PER,          t2.TOT_DED,
-             t2.TOT_NETO,         Isnull(t99.DIAS_POR_PAGAR, 0),             t1.NOM_TIPO_NOMINA,
-             tr.CLA_PERDED,       tp.NOM_PERDED,        t3.FECHA_NACIMIENTO, t3.EDAD;
+   If Exists ( Select top 1 1
+               From   #TmpEstatusNomina
+               Where  idEstatus = 2)
+      Begin
+         Insert Into #tmpNominasTrab
+        (CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA,      NOM_EMPRESA,
+         CLA_TRAB,         NOM_TRAB,         FECHA_ING,        FECHA_ING_GRUPO,
+         NSS,              RFC,              CLA_PERIODO,      NUM_NOMINA,
+         CLA_UBICACION,    NOM_UBICACION,    CLA_CENTRO_COSTO, NOM_CENTRO_COSTO,
+         CLA_DEPTO,        NOM_DEPTO,        CLA_PUESTO,       NOM_PUESTO,
+         NOM_PERIODO,      TIPO_COMPANIERO,  ANIO_MES,         INICIO_PER,
+         FIN_PER,          SUE_DIA,          SUE_INT,          TOT_PER,
+         TOT_DED,          TOT_NETO,         DIAS_POR_PAGAR,   NOM_TIPO_NOMINA,
+         CLA_PERDED,       NOM_PERDED,       Importe,          FECHA_NACIMIENTO,
+         EDAD)
+         Select t2.CLA_RAZON_SOCIAL, trz.NOM_RAZON_SOCIAL, t2.CLA_EMPRESA,      te.NOM_EMPRESA,
+                t2.cla_trab,         t3.NOM_TRAB,          t3.FECHA_ING,        t3.FECHA_ING_GRUPO,
+                t3.nss,              t3.RFC,               T1.CLA_PERIODO,      t1.NUM_NOMINA,
+                t3.CLA_UBICACION,    t5.NOM_UBICACION,     t3.CLA_CENTRO_COSTO, t6.NOM_CENTRO_COSTO,
+                t3.CLA_DEPTO,        t7.NOM_DEPTO,         t3.CLA_PUESTO,       t13.NOM_PUESTO,
+                t1.NOM_PERIODO,      t3.SINDICALIZADO,     T2.ANIO_MES,         Convert(Varchar(10), T1.INICIO_PER,103),
+                Convert(Varchar(10), T1.FIN_PER,103),      t2.SUE_DIA,          t2.SUE_INT,
+                t2.TOT_PER,          t2.TOT_DED,           t2.TOT_NETO,         Isnull(t99.DIAS_POR_PAGAR, 0),
+                t1.NOM_TIPO_NOMINA,  tr.CLA_PERDED,        tp.NOM_PERDED,       Sum(tr.importe),
+                t3.FECHA_NACIMIENTO, t3.EDAD
+         From   #tmpNominas          t1
+         Join   dbo.RH_ENC_REC_HISTO t2
+         On     t2.ANIO_MES          = t1.ANIO_MES
+         And    t2.CLA_EMPRESA       = t1.CLA_EMPRESA
+         And    t2.CLA_PERIODO       = t1.CLA_PERIODO
+         And    t2.NUM_NOMINA        = t1.NUM_NOMINA
+         Join   dbo.RH_DET_REC_HISTO TR
+         On     tr.CLA_TRAB          = t2.CLA_TRAB
+         And    Tr.CLA_EMPRESA       = t2.CLA_EMPRESA
+         And    tr.ANIO_MES          = t2.ANIO_MES
+         And    Tr.NUM_NOMINA        = t2.NUM_NOMINA
+         And    Tr.CLA_PERIODO       = t2.CLA_PERIODO
+         Join   #TmpRazon_Social     Trz
+         On     trz.CLA_RAZON_SOCIAL = t2.CLA_RAZON_SOCIAL
+         And    trz.CLA_EMPRESA      = t2.CLA_EMPRESA
+         Join   #TmpEmpresa          te
+         On     te.CLA_RAZON_SOCIAL = t2.CLA_RAZON_SOCIAL
+         And    te.CLA_EMPRESA      = t2.CLA_EMPRESA
+         Join   #TmpTrabajador       t3
+         On     t3.CLA_EMPRESA      = t2.CLA_EMPRESA
+         And    t3.CLA_RAZON_SOCIAL = t2.cla_razon_social
+         And    t3.CLA_TRAB         = t2.CLA_TRAB
+         Join   #tmpRegImss           t4
+         On     t4.CLA_EMPRESA      = t2.CLA_EMPRESA
+         And    t4.CLA_REG_IMSS     = t2.CLA_REG_IMSS
+         Join   #tmpUbicacion        t5
+         On     t5.CLA_EMPRESA      = t3.CLA_EMPRESA
+         And    t5.CLA_UBICACION    = t3.CLA_UBICACION
+         Join   #tmpCentroCosto       t6
+         On     t6.CLA_EMPRESA      = t3.CLA_EMPRESA
+         And    t6.CLA_CENTRO_COSTO = t3.CLA_CENTRO_COSTO
+         Join   #tmpDepto            t7
+         On     t7.CLA_EMPRESA      = t3.CLA_EMPRESA
+         And    t7.CLA_DEPTO        = t3.CLA_DEPTO
+         Join   #tmpPerded           tp
+         On     tp.Cla_Empresa      = tr.CLA_EMPRESA
+         And    tp.CLA_PERDED       = tr.CLA_PERDED
+         Left   Join  #tmpPuesto     t13
+         On     t13.CLA_EMPRESA     = t3.CLA_EMPRESA
+         And    t13.CLA_PUESTO      = t3.CLA_PUESTO
+         Left   Join  #TmpDIAS_POR_PAGAR T99
+         On     t99.CLA_EMPRESA     = t2.CLA_EMPRESA
+         And    t99.CLA_TRAB        = t2.CLA_TRAB
+         And    t99.ANIO_MES        = t2.ANIO_MES
+         And    t99.CLA_PERIODO     = t2.CLA_PERIODO
+         And    t99.NUM_NOMINA      = t2.NUM_NOMINA
+         Group  By t2.CLA_RAZON_SOCIAL, trz.NOM_RAZON_SOCIAL, t2.CLA_EMPRESA,      te.NOM_EMPRESA,
+                   t2.cla_trab,         t3.NOM_TRAB,          t3.FECHA_ING,        t3.FECHA_ING_GRUPO,
+                   t3.nss,              t3.RFC,               T1.CLA_PERIODO,      t1.NUM_NOMINA,
+                   t3.CLA_UBICACION,    t5.NOM_UBICACION,     t3.CLA_CENTRO_COSTO, t6.NOM_CENTRO_COSTO,
+                   t3.CLA_DEPTO,        t7.NOM_DEPTO,         t3.CLA_PUESTO,       t13.NOM_PUESTO,
+                   t1.NOM_PERIODO,      t3.SINDICALIZADO,     T2.ANIO_MES,         Convert(Varchar(10), T1.INICIO_PER,103),
+                   Convert(Varchar(10), T1.FIN_PER,103),
+                   t2.SUE_DIA,          t2.SUE_INT,           t2.TOT_PER,          t2.TOT_DED,
+                   t2.TOT_NETO,         Isnull(t99.DIAS_POR_PAGAR, 0),             t1.NOM_TIPO_NOMINA,
+                   tr.CLA_PERDED,       tp.NOM_PERDED,        t3.FECHA_NACIMIENTO, t3.EDAD;
+      End
 
-   If @PbIncluyeNominaAbierta = 1 And
+   If @PbIncluyeNominaAbierta = 1 Or
       Exists              ( Select top 1 1
                             From   #TmpEstatusNomina
                             Where  idEstatus = 1)
@@ -1458,10 +1480,11 @@ Begin
          And    Tr.CLA_PERIODO       = t2.CLA_PERIODO
          And    Tr.FOLIO_NOM         = t2.FOLIO_NOM
          Join   #TmpEmpresa          te
-         On     te.CLA_EMPRESA       = t2.CLA_EMPRESA
+         On     te.CLA_RAZON_SOCIAL = t2.CLA_RAZON_SOCIAL
+         And    te.CLA_EMPRESA      = t2.CLA_EMPRESA
          Join   #TmpRazon_Social     Trz
          On     trz.CLA_RAZON_SOCIAL = te.CLA_RAZON_SOCIAL
-         And    trz.CLA_EMPRESA      = te.CLA_RAZON_SOCIAL
+         And    trz.CLA_EMPRESA      = te.CLA_EMPRESA
          Join   #TmpTrabajador       t3
          On     t3.CLA_EMPRESA       = t2.CLA_EMPRESA
          And    t3.CLA_TRAB          = t2.CLA_TRAB
@@ -1503,8 +1526,20 @@ Begin
 
 
       End;
-               
 
+   If Not Exists ( Select Top 1 1
+                   From   #tmpNominasTrab)
+      Begin
+           Begin
+              Select @PnError   = 13,
+                     @PsMensaje = 'No Existen Coincidencias para los Parámetros Seleccionados.'
+
+              Select @PnError IdError, @PsMensaje Error
+              Set Xact_Abort Off
+              Return
+
+           End
+      End
    Select @w_fechaProcIni = Min(INICIO_PER),
           @w_fechaProcFin = Max(FIN_PER)
    From   #tmpNominasTrab;
@@ -1547,7 +1582,7 @@ Begin
 
    Declare
       C_Conceptos Cursor For
-      Select a.NOM_PERDED
+      Select a.NOM_PERDED, b.TIPO_PERDED
       From   #tmpNominasTrab a
       Join   #tmpPerded      b
       On     b.Cla_Empresa  = a.Cla_Empresa
@@ -1560,10 +1595,59 @@ Begin
       Open  C_Conceptos
       While @@Fetch_status < 1
       Begin
-         Fetch C_Conceptos Into @w_nom_perded;
+         Fetch C_Conceptos Into @w_nom_perded, @w_tipo_perded;
          If @@Fetch_status != 0
             Begin
                Break
+            End
+
+         If @w_tipo_perdedAnte = 0
+            Begin
+               Select @w_tipo_perdedAnte = @w_tipo_perded,
+                      @w_suma_Percepciones = 'Update #tmpResultado Set totalPercepciones = 0 ',
+                      @w_suma_Deducciones  = 'Update #tmpResultado Set totalDeducciones  = 0 ',
+                      @w_suma_Provisiones  = 'Update #tmpResultado Set totalProvisiones  = 0 ';
+            End
+
+         If @w_tipo_perded = 1
+            Begin
+               Set  @w_suma_Percepciones =  @w_suma_Percepciones + ' + ' + @w_nom_perded
+            End
+
+         If @w_tipo_perded = 2
+            Begin
+               Set  @w_suma_Deducciones =  @w_suma_Deducciones + ' + ' + @w_nom_perded
+            End
+
+         If @w_tipo_perded = 3
+            Begin
+               Set  @w_suma_Provisiones =  @w_suma_Provisiones + ' + ' + @w_nom_perded
+            End
+
+         If @w_tipo_perded != @w_tipo_perdedAnte
+            Begin
+               If @w_tipo_perdedAnte = 1
+                  Begin
+                     Set @w_sql = Concat('Alter Table #tmpResultado Add TOTALPERCEPCIONES ',
+                                         ' Decimal (18, 2) Null Default 0')
+                     Execute(@w_sql)
+
+                     Set @w_columnas = Concat(@w_columnas, ', TOTALPERCEPCIONES ');
+                     Set @w_colsuma  = Concat(@w_colsuma, ', 0')
+                  End
+
+               If @w_tipo_perdedAnte = 2
+                  Begin
+                     Set @w_sql = Concat('Alter Table #tmpResultado Add TOTALDEDUCCIONES ',
+                                         ' Decimal (18, 2) Null Default 0')
+                     Execute(@w_sql)
+
+                     Set @w_columnas = Concat(@w_columnas, ', totalDeducciones ');
+                     Set @w_colsuma  = Concat(@w_colsuma, ', 0')
+                  End
+
+               Set @w_tipo_perdedAnte = @w_tipo_perded
+
             End
 
          Set @w_sql = Concat('Alter Table #tmpResultado Add ', @w_nom_perded,
@@ -1580,6 +1664,14 @@ Begin
       Deallocate C_Conceptos
    End
 
+   Set @w_sql = Concat('Alter Table #tmpResultado Add TOTALPROVISIONES ',
+                                    ' Decimal (18, 2) Null Default 0')
+   Execute(@w_sql)
+
+   Set @w_columnas = Concat(@w_columnas, ', totalProvisiones ');
+
+   Set @w_colsuma  = Concat(@w_colsuma, ', 0')
+
    Alter Table #tmpResultado Add  NOMINAS       Varchar(2000) Null Default Char(32);
    Alter Table #tmpResultado Add  FECHA_INICIO  Varchar(  10) Null Default Char(32);
    Alter Table #tmpResultado Add  FECHA_TERMINO Varchar(  10) Null Default Char(32);
@@ -1592,6 +1684,7 @@ Begin
 --
 -- Detalle por Trabajador
 --
+
 
    Set @w_executeInsert = Concat('Insert Into #tmpResultado ',
                                  '(tipo,           CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA,',
@@ -1754,7 +1847,16 @@ Begin
                                  'From  #tmpNominasTrab ',
                                  'Order By 2, 3, 5, 6, 8, 4' );
 
-  Execute (@w_executeInsert);
+   Execute (@w_executeInsert);
+
+   Execute (@w_suma_Percepciones)
+   Execute (@w_suma_Deducciones)
+   Execute (@w_suma_provisiones)
+
+   Update #tmpResultado
+   Set       TOT_PER  = totalPercepciones,
+             TOT_DED  = totalDeducciones,
+             TOT_NETO = totalPercepciones - totalDeducciones;
 
    Set @w_secuencia = 0
 

@@ -712,15 +712,15 @@ Begin
    Join  #TempTrabajador   t19
    On    T1.CLA_TRAB     = T19.CLA_TRAB
    And   T1.CLA_EMPRESA  = T7.CLA_EMPRESA  
-   Join  (Select a.CLA_EMPRESA, b.CLA_TAB_PRE, b.NOM_TAB_PRE, a.CLA_TRAB, DIAS_VAC, PRIMA_VAC, DIAS_AGUI
-          From   RH_TRAB a
-          Join   RH_ENC_TAB_PRESTAC b
-          On     b.CLA_TAB_PRE = a.CLA_TAB_PRE
-          And    b.CLA_EMPRESA = a.CLA_EMPRESA
-          Join   RH_DET_TAB_PRESTAC c
-          On     c.CLA_TAB_PRE = b.CLA_TAB_PRE
-          And    c.CLA_EMPRESA = b.CLA_EMPRESA
-          And    c.ANTIG       = dbo.fnStd_CalcAntig(0, FECHA_ING, @w_fecha, a.CLA_TRAB, a.CLA_EMPRESA, 3)) x
+   Left  Join  (Select a.CLA_EMPRESA, b.CLA_TAB_PRE, b.NOM_TAB_PRE, a.CLA_TRAB, DIAS_VAC, PRIMA_VAC, DIAS_AGUI
+                From   RH_TRAB a
+                Join   RH_ENC_TAB_PRESTAC b
+                On     b.CLA_TAB_PRE = a.CLA_TAB_PRE
+                And    b.CLA_EMPRESA = a.CLA_EMPRESA
+                Join   RH_DET_TAB_PRESTAC c
+                On     c.CLA_TAB_PRE = b.CLA_TAB_PRE
+                And    c.CLA_EMPRESA = b.CLA_EMPRESA
+                And    c.ANTIG       = dbo.fnStd_CalcAntig(0, FECHA_ING, @w_fecha, a.CLA_TRAB, a.CLA_EMPRESA, 3)) x
    On    x.CLA_EMPRESA         = T1.CLA_EMPRESA
    And   x.CLA_TRAB            = T1.CLA_TRAB
    Where DBO.fnc_ValidaSeguridadStd(T1.CLA_EMPRESA, @nUsuario,T1.CLA_UBICACION_BASE,T1.CLA_dEPTO,T1.CLA_PERIODO) > 0
