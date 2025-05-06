@@ -1359,7 +1359,7 @@ Begin
 
    If Exists ( Select top 1 1
                From   #TmpEstatusNomina
-               Where  idEstatus = 2)
+               Where  idEstatus = 9)
       Begin
          Insert Into #tmpNominasTrab
         (CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA,      NOM_EMPRESA,

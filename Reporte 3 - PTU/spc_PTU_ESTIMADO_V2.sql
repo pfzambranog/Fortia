@@ -1093,7 +1093,7 @@ Begin
    From   #tmpNominas
    Where  NOM_TIPO_NOMINA ='GRATIFICACION ESPECIAL';
 
-   If @w_status_nomina = 2
+   If @w_status_nomina = 9
       Begin
          Insert Into #TmpSalarioProm
         (CLA_RAZON_SOCIAL, CLA_EMPRESA, CLA_TRAB, CLA_PERDED,
