@@ -407,7 +407,8 @@ Begin
 --
 
    Create Table #tmpNominasTrab
-  (CLA_RAZON_SOCIAL  Integer         Not Null,
+  (Secuencia         Integer         Not Null Identity(1, 1) Primary Key,
+   CLA_RAZON_SOCIAL  Integer         Not Null,
    NOM_RAZON_SOCIAL  Varchar(300)    Not Null,
    CLA_EMPRESA       Integer         Not Null,
    NOM_EMPRESA       Varchar(100)    Not Null,
@@ -1327,13 +1328,9 @@ Begin
   (CLA_EMPRESA, CLA_TRAB, CLA_PERIODO, NUM_NOMINA,
    ANIO_MES,    DIAS_POR_PAGAR)
    Select a.cla_empresa, a.CLA_TRAB, a.CLA_PERIODO, a.NUM_NOMINA, a.ANIO_MES,
-          Sum(Case When b.tipo_perded = 1
-                   Then importe
-                   When b.tipo_perded = 2
-                   Then -importe
-                   Else 0
-              End) DIAS_POR_PAGAR
-   From   dbo.RH_det_REC_HISTO a
+          Sum((a.dias_per - (a.F_JUST_SUE + a.F_INJUST  + a.F_JUST_NSUE + 
+                             a.INCAP_ENF  + a.INCAP_MAT + a.INCAP_RIES))) DIAS_POR_PAGAR
+   From   dbo.RH_ENC_REC_HISTO a
    Join   #TmpEmpresa          E
    On     E.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
    And    E.CLA_EMPRESA      = a.CLA_EMPRESA
@@ -1341,17 +1338,13 @@ Begin
    On     T.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
    And    T.CLA_EMPRESA      = a.CLA_EMPRESA
    And    T.CLA_TRAB         = a.CLA_TRAB
-   Join   #tmpPerded           b
-   On     b.CLA_PERDED       = a.CLA_PERDED
-   And    b.CLA_EMPRESA      = a.CLA_EMPRESA
-   And    b.GRUPO_CAL1       = 1
-   And    b.NO_AFECTAR_NETO  = 0
    Join   #tmpNominas          c
    On     c.ANIO_MES         = a.ANIO_MES
    And    c.CLA_EMPRESA      = a.CLA_EMPRESA
    And    c.CLA_PERIODO      = a.CLA_PERIODO
    And    c.NUM_NOMINA       = a.NUM_NOMINA
-   Group  By a.cla_empresa, a.CLA_TRAB, a.CLA_PERIODO, a.ANIO_MES, a.NUM_NOMINA;
+   Group  By a.CLA_EMPRESA, a.CLA_TRAB, a.CLA_PERIODO, a.NUM_NOMINA,
+             a.ANIO_MES;
 
 --
 -- Inicio de Consulta para el reporte.
@@ -1379,7 +1372,8 @@ Begin
                 t3.CLA_DEPTO,        t7.NOM_DEPTO,         t3.CLA_PUESTO,       t13.NOM_PUESTO,
                 t1.NOM_PERIODO,      t3.SINDICALIZADO,     T2.ANIO_MES,         Convert(Varchar(10), T1.INICIO_PER,103),
                 Convert(Varchar(10), T1.FIN_PER,103),      t2.SUE_DIA,          t2.SUE_INT,
-                t2.TOT_PER,          t2.TOT_DED,           t2.TOT_NETO,         Isnull(t99.DIAS_POR_PAGAR, 0),
+                t2.TOT_PER,          t2.TOT_DED,           t2.TOT_NETO,         
+                0,
                 t1.NOM_TIPO_NOMINA,  tr.CLA_PERDED,        tp.NOM_PERDED,       Sum(tr.importe),
                 t3.FECHA_NACIMIENTO, t3.EDAD
          From   #tmpNominas          t1
@@ -1422,12 +1416,6 @@ Begin
          Left   Join  #tmpPuesto     t13
          On     t13.CLA_EMPRESA     = t3.CLA_EMPRESA
          And    t13.CLA_PUESTO      = t3.CLA_PUESTO
-         Left   Join  #TmpDIAS_POR_PAGAR T99
-         On     t99.CLA_EMPRESA     = t2.CLA_EMPRESA
-         And    t99.CLA_TRAB        = t2.CLA_TRAB
-         And    t99.ANIO_MES        = t2.ANIO_MES
-         And    t99.CLA_PERIODO     = t2.CLA_PERIODO
-         And    t99.NUM_NOMINA      = t2.NUM_NOMINA
          Group  By t2.CLA_RAZON_SOCIAL, trz.NOM_RAZON_SOCIAL, t2.CLA_EMPRESA,      te.NOM_EMPRESA,
                    t2.cla_trab,         t3.NOM_TRAB,          t3.FECHA_ING,        t3.FECHA_ING_GRUPO,
                    t3.nss,              t3.RFC,               T1.CLA_PERIODO,      t1.NUM_NOMINA,
@@ -1436,7 +1424,7 @@ Begin
                    t1.NOM_PERIODO,      t3.SINDICALIZADO,     T2.ANIO_MES,         Convert(Varchar(10), T1.INICIO_PER,103),
                    Convert(Varchar(10), T1.FIN_PER,103),
                    t2.SUE_DIA,          t2.SUE_INT,           t2.TOT_PER,          t2.TOT_DED,
-                   t2.TOT_NETO,         Isnull(t99.DIAS_POR_PAGAR, 0),             t1.NOM_TIPO_NOMINA,
+                   t2.TOT_NETO,         t1.NOM_TIPO_NOMINA,
                    tr.CLA_PERDED,       tp.NOM_PERDED,        t3.FECHA_NACIMIENTO, t3.EDAD;
       End
 
@@ -1464,7 +1452,7 @@ Begin
                 t1.NOM_PERIODO,       t3.SINDICALIZADO,     T2.ANIO_MES_ISPT,    Convert(Varchar(10), T1.INICIO_PER,103),
                 Convert(Varchar(10),  T1.FIN_PER,103),
                 t2.SUE_DIA,           t2.SUE_INT,           t2.TOT_PER,          t2.TOT_DED,
-                t2.TOT_NETO,          Isnull(t99.DIAS_POR_PAGAR, 0),
+                t2.TOT_NETO,          0,
                 t1.NOM_TIPO_NOMINA,   tr.CLA_PERDED,        tp.NOM_PERDED,       Sum(tr.importe),
                 t3.FECHA_NACIMIENTO,  t3.EDAD
          From   #tmpNominas           t1
@@ -1506,12 +1494,6 @@ Begin
          Left   Join  #tmpPuesto     t13
          On     t13.CLA_EMPRESA      = t3.CLA_EMPRESA
          And    t13.CLA_PUESTO       = t3.CLA_PUESTO
-         Left   Join  #TmpDIAS_POR_PAGAR T99
-         On     t99.CLA_EMPRESA      = t2.CLA_EMPRESA
-         And    t99.CLA_TRAB         = t2.CLA_TRAB
-         And    t99.ANIO_MES         = t2.ANIO_MES_ISPT
-         And    t99.CLA_PERIODO      = t2.CLA_PERIODO
-         And    t99.NUM_NOMINA       = t2.NUM_NOMINA
          Group  By trz.CLA_RAZON_SOCIAL, trz.NOM_RAZON_SOCIAL, t2.CLA_EMPRESA,      te.NOM_EMPRESA,
                 t2.cla_trab,         t3.NOM_TRAB,         t3.FECHA_ING,        t3.FECHA_ING_GRUPO,
                 t3.nss,              t3.RFC,              T1.CLA_PERIODO,      t1.NUM_NOMINA,
@@ -1520,12 +1502,29 @@ Begin
                 t1.NOM_PERIODO,      t3.SINDICALIZADO,    T2.ANIO_MES_ISPT,    Convert(Varchar(10), T1.INICIO_PER,103),
                 Convert(Varchar(10), T1.FIN_PER,103),
                 t2.SUE_DIA,          t2.SUE_INT,          t2.TOT_PER,          t2.TOT_DED,
-                t2.TOT_NETO,         Isnull(t99.DIAS_POR_PAGAR, 0),
+                t2.TOT_NETO,
                 t1.NOM_TIPO_NOMINA,  tr.CLA_PERDED,       tp.NOM_PERDED,       t3.FECHA_NACIMIENTO,
                 t3.EDAD;
 
 
       End;
+
+   Update #tmpNominasTrab
+   Set    DIAS_POR_PAGAR = (Select Sum(DIAS_POR_PAGAR)
+                            From   #TmpDIAS_POR_PAGAR T99
+                            Where  t99.CLA_EMPRESA      = t2.CLA_EMPRESA
+                            And    t99.CLA_TRAB         = t2.CLA_TRAB
+                            And    t99.ANIO_MES         = t2.ANIO_MES
+                            And    t99.CLA_PERIODO      = t2.CLA_PERIODO
+                            And    t99.NUM_NOMINA       = t2.NUM_NOMINA)
+   From   #tmpNominasTrab t2
+   Where  Secuencia       = (Select Min (secuencia)
+                            From   #tmpNominasTrab
+                            Where  CLA_EMPRESA      = t2.CLA_EMPRESA
+                            And    CLA_TRAB         = t2.CLA_TRAB
+                            And    ANIO_MES         = t2.ANIO_MES
+                            And    CLA_PERIODO      = t2.CLA_PERIODO
+                            And    NUM_NOMINA       = t2.NUM_NOMINA)         
 
    If Not Exists ( Select Top 1 1
                    From   #tmpNominasTrab)
@@ -1540,6 +1539,7 @@ Begin
 
            End
       End
+
    Select @w_fechaProcIni = Min(INICIO_PER),
           @w_fechaProcFin = Max(FIN_PER)
    From   #tmpNominasTrab;
@@ -1790,7 +1790,7 @@ Begin
    If @w_regEmpr > 1
       Begin
          Set @w_executeInsert = Concat('Insert Into #tmpResultado ',
-                                       '(tipo,  CLA_RAZON_SOCIAL, CLA_EMPRESA, CLA_TRAB,  CLA_UBICACION, NOM_TRAB,, ',
+                                       '(tipo,  CLA_RAZON_SOCIAL, CLA_EMPRESA, CLA_TRAB,  CLA_UBICACION, NOM_TRAB, ',
                                        'CLA_CENTRO_COSTO, CLA_DEPTO ',
                                         @w_columnas, ') ',
                                        'Select ', @w_comilla, 'L4', @w_comilla, ', ',
