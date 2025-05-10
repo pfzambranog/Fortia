@@ -1,7 +1,7 @@
 -- Declare
    -- @PsRazon_Social            Varchar(Max)   = '1',
    -- @PsCla_Empresa             Varchar(Max)   = '',
-   -- @PnAnio                    Integer,
+   -- @PnAnio                    Integer        = 2025,
    -- @PsCla_Ubicacion           Varchar(Max)   = '',
    -- @PsCla_CentroCosto         Varchar(Max)   = '',
    -- @PsCla_Area                Varchar(Max)   = '',
@@ -384,7 +384,7 @@ Begin
    INICIO_PER        Date               Null,
    FIN_PER           Date               Null,
    CLA_PERDED        Integer        Not Null,
-   NOM_PERDED        Varchar( 80)   Not Null,
+   NOM_PERDED        Varchar(120)   Not Null,
    TIPO_PERDED       Integer        Not Null,
    IMPORTE           Decimal(18, 2) Not Null Default 0,
    SALDO             Decimal(18, 2) Not Null Default 0,
@@ -398,7 +398,7 @@ Begin
 --
 
    Create Table #tmpResultado
-  (secuencia           Integer        Not Null Identity (1, 1) Primary Key,
+  (Secuencia           Integer        Not Null Identity (1, 1) Primary Key,
    TIPO_PERDED         Integer        Not Null,
    NOM_TIPO            Varchar( 15)   Not Null Default Char(32),
    CLA_PERDED          Varchar( 15)       Null Default Char(32),
@@ -795,7 +795,7 @@ Begin
          And    a.NO_IMPRIMIR     = 0
          And    a.ES_PROVISION    = 0
          Union
-         Select Distinct a.CLA_EMPRESA, a.CLA_PERDED, a.NOM_PERDED,
+         Select Distinct a.CLA_EMPRESA, a.CLA_PERDED, '*** ' + a.NOM_PERDED,
                 Case When TIPO_PERDED = 10
                      Then 1
                      Else 2
@@ -839,7 +839,7 @@ Begin
          And    b.NO_IMPRIMIR     = 0
          And    b.ES_PROVISION    = 0
          Union
-         Select Distinct b.CLA_EMPRESA, b.CLA_PERDED, b.NOM_PERDED,
+         Select Distinct b.CLA_EMPRESA, b.CLA_PERDED, '*** ' + b.NOM_PERDED,
                 Case When b.TIPO_PERDED = 10
                      Then 1
                      Else 2
@@ -1040,6 +1040,7 @@ Begin
 -- Inicio de Consulta para el reporte.
 --
 
+
    Insert Into #tmpImporteNominas
   (CLA_EMPRESA,     CLA_PERIODO,        NUM_NOMINA,         NOM_UBICACION,
    NOM_DEPTO,       NOM_PERIODO,        ANIO_MES,           INICIO_PER,
@@ -1181,13 +1182,14 @@ Begin
 
   Insert Into #tmpResultado
   (TIPO_PERDED, IMPORTE)
-   Select 5,
+   Select 6,
           Format(Sum(Case When TIPO_PERDED = 1
                           Then Importe
                           Else -IMPORTE
                      End),      '##,###,###,##0.00')
    From   #tmpImporteNominas
-   Where  TIPO_PERDED In (1, 2);
+   Where  TIPO_PERDED                 In (1, 2)
+   And    Substring(NOM_PERDED, 1, 3) != '***';
 
    Insert Into #tmpSalida
   (TIPO_PERDED, NOM_TIPO,     CONCEPTO,     DESCRIPCION,
@@ -1232,9 +1234,13 @@ Begin
         (TIPO_PERDED, NOM_TIPO,     CONCEPTO,     DESCRIPCION,
          IMPORTE,     SALDO,        SALDO_EXENTO, SALDO_GRAVADO,
          TITULO_REP,  NOMINA,       FECHA_INICIO, FECHA_TERMINO)
-         Select 3 TIPO_PERDED, 'PROVISIONES'     NOM_TIPO,   Char(32)  CONCEPTO, Char(32) Descripcion,
-                Char(32) IMPORTE,
-                Char(32)   SALDO,  Char(32)   EXENTO, Char(32) GRAVADO,
+         Select 3 TIPO_PERDED, 'PROVISIONES'     NOM_TIPO,
+                Char(32)  CONCEPTO,
+                Char(32)  Descripcion,
+                Char(32)  IMPORTE,
+                Char(32)  SALDO,
+                Char(32)  EXENTO,
+                Char(32)  GRAVADO,
                 Char(32),       Char(32),     Char(32),   Char(32)
          From   #tmpResultado
          Where  secuencia = 1
@@ -1243,7 +1249,8 @@ Begin
         (TIPO_PERDED, NOM_TIPO,     CONCEPTO,     DESCRIPCION,
          IMPORTE,     SALDO,        SALDO_EXENTO, SALDO_GRAVADO,
          TITULO_REP,  NOMINA,       FECHA_INICIO, FECHA_TERMINO)
-         Select TIPO_PERDED, ' ' NOM_TIPO,    CLA_PERDED CONCEPTO, NOM_PERDED  Descripcion, IMPORTE,
+         Select TIPO_PERDED, ' ' NOM_TIPO,    CLA_PERDED CONCEPTO,
+                NOM_PERDED  Descripcion, IMPORTE,
                 SALDO,          SALDO_EXENTO, SALDO_GRAVADO,
                 Char(32),       Char(32),     Char(32),   Char(32)
          From   #tmpResultado
@@ -1259,9 +1266,26 @@ Begin
           Format(Sum(Cast(Replace(IMPORTE, ',', '') as Decimal(18, 2))), '##,###,###,##0.00'),
           Char(32)   SALDO,  Char(32)     EXENTO, Char(32) GRAVADO
    From   #tmpResultado
+   Where  TIPO_PERDED                  = 1
+   And    Substring(NOM_PERDED, 1, 3) != '***'
+   Group  By TIPO_PERDED;
+
+
+   Insert Into #tmpSalida
+  (TIPO_PERDED, NOM_TIPO, CONCEPTO,     DESCRIPCION,
+   IMPORTE,     SALDO,    SALDO_EXENTO, SALDO_GRAVADO)
+   Select TIPO_PERDED, ' '     NOM_TIPO,
+          Char(32) CONCEPTO,  '*** TOTAL VALES DESPENSA '     Descripcion,
+          Format(Sum(Cast(Replace(IMPORTE, ',', '') as Decimal(18, 2))), '##,###,###,##0.00'),
+          Char(32)   SALDO,  Char(32)     EXENTO, Char(32) GRAVADO
+   From   #tmpResultado
    Where  TIPO_PERDED = 1
-   Group  By TIPO_PERDED
-   Union
+   And    Substring(NOM_PERDED, 1, 3) = '***'
+   Group  By TIPO_PERDED;
+
+   Insert Into #tmpSalida
+  (TIPO_PERDED, NOM_TIPO, CONCEPTO,     DESCRIPCION,
+   IMPORTE,     SALDO,    SALDO_EXENTO, SALDO_GRAVADO)
    Select TIPO_PERDED, ' '     NOM_TIPO,
           Char(32) CONCEPTO,  'TOTAL DEDUCCIONES'     Descripcion,
           Format(Sum(Cast(Replace(IMPORTE, ',', '') as Decimal(18, 2))), '##,###,###,##0.00'),
@@ -1297,7 +1321,7 @@ Begin
           Format(Sum(Cast(Replace(IMPORTE, ',', '') as Decimal(18, 2))), '##,###,###,##0.00'),
           Char(32)   SALDO,  Char(32)     EXENTO, Char(32) GRAVADO
    From   #tmpResultado
-   Where  TIPO_PERDED = 5
+   Where  TIPO_PERDED = 6
    Group  By TIPO_PERDED
 
 --
