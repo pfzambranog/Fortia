@@ -150,9 +150,11 @@ Declare
    @w_idTabla                 Integer,
    @w_tipo_perded             Integer,
    @w_tipo_perdedAnte         Integer,
+   @w_no_afectar_neto         Integer,
    @w_horaProceso             Char(20),
    @w_comilla                 Char( 1),
    @w_inicio                  Bit,
+   @w_existeDeduccion         Bit,
    @w_FECHA_ING               Date,
    @w_fecha_ing_ante          Date,
    @w_FECHA_ING_GRUPO         Date,
@@ -178,13 +180,14 @@ Begin
    Set Nocount       On
    Set Xact_Abort    On
    Set Ansi_Nulls    Off
-   Set Ansi_Warnings On
+   Set Ansi_Warnings Off
 
    Select @PnError           = 0,
           @w_registros       = 0,
           @w_secuencia       = 0,
           @w_inicio          = 1,
           @w_tipo_perdedAnte = 0,
+          @w_existeDeduccion = 0,
           @w_nominas         = '',
           @w_columnas        = '',
           @w_colsuma         = '',
@@ -1328,8 +1331,8 @@ Begin
   (CLA_EMPRESA, CLA_TRAB, CLA_PERIODO, NUM_NOMINA,
    ANIO_MES,    DIAS_POR_PAGAR)
    Select a.cla_empresa, a.CLA_TRAB, a.CLA_PERIODO, a.NUM_NOMINA, a.ANIO_MES,
-          Sum((a.dias_per - (a.F_JUST_SUE + a.F_INJUST  + a.F_JUST_NSUE + 
-                             a.INCAP_ENF  + a.INCAP_MAT + a.INCAP_RIES))) DIAS_POR_PAGAR
+          Sum((Isnull(a.dias_per, 0) - (Isnull(a.F_JUST_SUE, 0) + Isnull(a.F_INJUST , 0) + Isnull(a.F_JUST_NSUE,0) +
+                                        Isnull(a.INCAP_ENF , 0) + Isnull(a.INCAP_MAT, 0) + Isnull(a.INCAP_RIES ,0)))) DIAS_POR_PAGAR
    From   dbo.RH_ENC_REC_HISTO a
    Join   #TmpEmpresa          E
    On     E.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
@@ -1372,7 +1375,7 @@ Begin
                 t3.CLA_DEPTO,        t7.NOM_DEPTO,         t3.CLA_PUESTO,       t13.NOM_PUESTO,
                 t1.NOM_PERIODO,      t3.SINDICALIZADO,     T2.ANIO_MES,         Convert(Varchar(10), T1.INICIO_PER,103),
                 Convert(Varchar(10), T1.FIN_PER,103),      t2.SUE_DIA,          t2.SUE_INT,
-                t2.TOT_PER,          t2.TOT_DED,           t2.TOT_NETO,         
+                t2.TOT_PER,          t2.TOT_DED,           t2.TOT_NETO,
                 0,
                 t1.NOM_TIPO_NOMINA,  tr.CLA_PERDED,        tp.NOM_PERDED,       Sum(tr.importe),
                 t3.FECHA_NACIMIENTO, t3.EDAD
@@ -1509,23 +1512,6 @@ Begin
 
       End;
 
-   Update #tmpNominasTrab
-   Set    DIAS_POR_PAGAR = (Select Sum(DIAS_POR_PAGAR)
-                            From   #TmpDIAS_POR_PAGAR T99
-                            Where  t99.CLA_EMPRESA      = t2.CLA_EMPRESA
-                            And    t99.CLA_TRAB         = t2.CLA_TRAB
-                            And    t99.ANIO_MES         = t2.ANIO_MES
-                            And    t99.CLA_PERIODO      = t2.CLA_PERIODO
-                            And    t99.NUM_NOMINA       = t2.NUM_NOMINA)
-   From   #tmpNominasTrab t2
-   Where  Secuencia       = (Select Min (secuencia)
-                            From   #tmpNominasTrab
-                            Where  CLA_EMPRESA      = t2.CLA_EMPRESA
-                            And    CLA_TRAB         = t2.CLA_TRAB
-                            And    ANIO_MES         = t2.ANIO_MES
-                            And    CLA_PERIODO      = t2.CLA_PERIODO
-                            And    NUM_NOMINA       = t2.NUM_NOMINA)         
-
    If Not Exists ( Select Top 1 1
                    From   #tmpNominasTrab)
       Begin
@@ -1539,6 +1525,36 @@ Begin
 
            End
       End
+
+   Update #tmpNominasTrab
+   Set    DIAS_POR_PAGAR = (Select Sum(DIAS_POR_PAGAR)
+                            From   #TmpDIAS_POR_PAGAR T99
+                            Where  t99.CLA_EMPRESA      = t2.CLA_EMPRESA
+                            And    t99.CLA_TRAB         = t2.CLA_TRAB
+                            And    t99.ANIO_MES         = t2.ANIO_MES
+                            And    t99.CLA_PERIODO      = t2.CLA_PERIODO
+                            And    t99.NUM_NOMINA       = t2.NUM_NOMINA)
+   From   #tmpNominasTrab t2
+   Where  Secuencia      = (Select Min (secuencia)
+                            From   #tmpNominasTrab
+                            Where  CLA_EMPRESA      = t2.CLA_EMPRESA
+                            And    CLA_TRAB         = t2.CLA_TRAB
+                            And    ANIO_MES         = t2.ANIO_MES
+                            And    CLA_PERIODO      = t2.CLA_PERIODO
+                            And    NUM_NOMINA       = t2.NUM_NOMINA);
+
+   Update #tmpNominasTrab
+   Set    TOT_PER  = 0,
+          TOT_DED  = 0,
+          TOT_NETO = 0
+   From   #tmpNominasTrab t2
+   Where  Secuencia      != (Select Min (secuencia)
+                             From   #tmpNominasTrab
+                             Where  CLA_EMPRESA      = t2.CLA_EMPRESA
+                             And    CLA_TRAB         = t2.CLA_TRAB
+                             And    ANIO_MES         = t2.ANIO_MES
+                             And    CLA_PERIODO      = t2.CLA_PERIODO
+                             And    NUM_NOMINA       = t2.NUM_NOMINA);
 
    Select @w_fechaProcIni = Min(INICIO_PER),
           @w_fechaProcFin = Max(FIN_PER)
@@ -1580,22 +1596,23 @@ Begin
 -- Adición de Columnas de Conceptos de nómina a la tabla de Salida.
 --
 
+
    Declare
       C_Conceptos Cursor For
-      Select a.NOM_PERDED, b.TIPO_PERDED
+      Select a.NOM_PERDED, b.TIPO_PERDED, b.NO_AFECTAR_NETO
       From   #tmpNominasTrab a
       Join   #tmpPerded      b
       On     b.Cla_Empresa  = a.Cla_Empresa
       And    b.CLA_PERDED   = a.CLA_PERDED
       Where  a.IMPORTE     != 0
-      Group  By a.NOM_PERDED, b.TIPO_PERDED, a.CLA_PERDED
+      Group  By a.NOM_PERDED, b.TIPO_PERDED, a.CLA_PERDED, b.NO_AFECTAR_NETO
       Order  By b.TIPO_PERDED, a.CLA_PERDED;
 
    Begin
       Open  C_Conceptos
       While @@Fetch_status < 1
       Begin
-         Fetch C_Conceptos Into @w_nom_perded, @w_tipo_perded;
+         Fetch C_Conceptos Into @w_nom_perded, @w_tipo_perded, @w_no_afectar_neto;
          If @@Fetch_status != 0
             Begin
                Break
@@ -1609,12 +1626,14 @@ Begin
                       @w_suma_Provisiones  = 'Update #tmpResultado Set totalProvisiones  = 0 ';
             End
 
-         If @w_tipo_perded = 1
+         If @w_tipo_perded     = 1 And
+            @w_no_afectar_neto = 0
             Begin
                Set  @w_suma_Percepciones =  @w_suma_Percepciones + ' + ' + @w_nom_perded
             End
 
-         If @w_tipo_perded = 2
+         If @w_tipo_perded     = 2 And
+            @w_no_afectar_neto = 0
             Begin
                Set  @w_suma_Deducciones =  @w_suma_Deducciones + ' + ' + @w_nom_perded
             End
@@ -1642,13 +1661,26 @@ Begin
                                          ' Decimal (18, 2) Null Default 0')
                      Execute(@w_sql)
 
-                     Set @w_columnas = Concat(@w_columnas, ', totalDeducciones ');
-                     Set @w_colsuma  = Concat(@w_colsuma, ', 0')
+                     Set @w_columnas        = Concat(@w_columnas, ', totalDeducciones ');
+                     Set @w_colsuma         = Concat(@w_colsuma,  ', 0')
+                     Set @w_existeDeduccion = 1;
                   End
 
-               Set @w_tipo_perdedAnte = @w_tipo_perded
-
             End
+
+         If @w_tipo_perded     = 3 And
+            @w_existeDeduccion = 0
+            Begin
+               Set @w_sql = Concat('Alter Table #tmpResultado Add TOTALDEDUCCIONES ',
+                                   ' Decimal (18, 2) Null Default 0')
+               Execute(@w_sql)
+               Set @w_existeDeduccion = 1;
+
+               Set @w_columnas        = Concat(@w_columnas, ', totalDeducciones ');
+               Set @w_colsuma         = Concat(@w_colsuma,  ', 0')
+            End
+
+         Set @w_tipo_perdedAnte = @w_tipo_perded
 
          Set @w_sql = Concat('Alter Table #tmpResultado Add ', @w_nom_perded,
                                   ' Decimal (18, 2) Null Default 0')
@@ -1663,6 +1695,20 @@ Begin
       Close      C_Conceptos
       Deallocate C_Conceptos
    End
+
+   If @w_existeDeduccion = 0
+      Begin
+         Set @w_sql = Concat('Alter Table #tmpResultado Add TOTALDEDUCCIONES ',
+                             ' Decimal (18, 2) Null Default 0')
+         Execute(@w_sql)
+
+         Set @w_existeDeduccion = 1;
+
+         Set @w_columnas        = Concat(@w_columnas, ', totalDeducciones ');
+         Set @w_colsuma  = Concat(@w_colsuma, ', Sum(',
+                                       'Iif(NOM_PERDED = ', @w_comilla, trim(@w_nom_perded), @w_comilla,
+                                                           ',importe, 0))');
+     End
 
    Set @w_sql = Concat('Alter Table #tmpResultado Add TOTALPROVISIONES ',
                                     ' Decimal (18, 2) Null Default 0')
@@ -1681,10 +1727,10 @@ Begin
                                @w_comilla, Convert(Char(10), @w_fechaProcIni, 103), @w_comilla, ', ',
                                @w_comilla, Convert(Char(10), @w_fechaProcFin, 103), @w_comilla)
 
+
 --
 -- Detalle por Trabajador
 --
-
 
    Set @w_executeInsert = Concat('Insert Into #tmpResultado ',
                                  '(tipo,           CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA,',
@@ -1759,6 +1805,7 @@ Begin
                                  'Order By CLA_RAZON_SOCIAL, CLA_EMPRESA,  CLA_UBICACION, 6, 8, 4' );
 
    Execute (@w_executeInsert);
+
 
 --
 -- Total por Ubicación.
@@ -1850,13 +1897,25 @@ Begin
    Execute (@w_executeInsert);
 
    Execute (@w_suma_Percepciones)
-   Execute (@w_suma_Deducciones)
+
+   If @w_existeDeduccion = 1
+      Begin
+         Execute (@w_suma_Deducciones)
+      End
    Execute (@w_suma_provisiones)
 
    Update #tmpResultado
    Set       TOT_PER  = totalPercepciones,
-             TOT_DED  = totalDeducciones,
-             TOT_NETO = totalPercepciones - totalDeducciones;
+             TOT_NETO = totalPercepciones;
+
+   If @w_existeDeduccion = 1
+      Begin
+         Set @w_sql = 'Update #tmpResultado
+                       Set       TOT_DED  = totalDeducciones,
+                                 TOT_NETO = totalPercepciones - totalDeducciones';
+         Execute (@w_sql)
+      End
+
 
    Set @w_secuencia = 0
 

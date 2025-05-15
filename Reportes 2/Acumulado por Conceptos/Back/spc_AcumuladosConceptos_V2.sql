@@ -1040,7 +1040,6 @@ Begin
 -- Inicio de Consulta para el reporte.
 --
 
-
    Insert Into #tmpImporteNominas
   (CLA_EMPRESA,     CLA_PERIODO,        NUM_NOMINA,         NOM_UBICACION,
    NOM_DEPTO,       NOM_PERIODO,        ANIO_MES,           INICIO_PER,
@@ -1292,6 +1291,7 @@ Begin
           Char(32)   SALDO,  Char(32)     EXENTO, Char(32) GRAVADO
    From   #tmpResultado
    Where  TIPO_PERDED = 2
+   And    Substring(NOM_PERDED, 1, 3) != '***'
    Group  By TIPO_PERDED
 
 
