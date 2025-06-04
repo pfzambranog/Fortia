@@ -57,6 +57,7 @@ Declare
   @INI_ANIO_ACTUAL           Date,
   @INI_ANIO_ANTERIOR         Date,
 --
+  @w_anioMes                 Integer,
   @w_anioMesIni              Char(4),
   @w_anioMesFin              Char(4),
   @w_fecha                   Date,
@@ -75,6 +76,7 @@ Begin
           @w_anioMesIni      = '0101',
           @w_anioMesFin      = '1231',
           @w_anio            = Year(@w_fechaProc),
+          @w_anioMes         = (@w_anio * 100) + Month(@w_fecha),
           @INI_ANIO_ANTERIOR = Convert(Date, Str(Year(DATEADD(YY, -1, @w_fecha ))) + @w_anioMesIni),
           @FIN_ANIO_ANTERIOR = Convert(DATE, Str(Year(DATEADD(YY, -1, @w_fecha)))  + @w_anioMesFin),
           @INI_ANIO_ACTUAL   = Convert(Date, Str(Year(@w_fecha)) + @w_anioMesIni),
@@ -633,8 +635,7 @@ Begin
                                                (Select MAX(CLA_TIPO_MOV)
                                                 From   dbo.RH_NEGOCIA_FINIQUITO
                                                 Where  CLA_TRAB   = T1.CLA_TRAB
-                                                And    FECHA_BAJA = T1.Fecha_Baja))
-                 ), '') CAUSA_BAJA,
+                                                And    FECHA_BAJA = T1.Fecha_Baja))), '') CAUSA_BAJA,
           T1.CUADRO_NETO,
           Case When T1.CALC_NOMINA = 1
                Then 'SI APLICA'
@@ -662,7 +663,7 @@ Begin
                   And    b.ES_PROVISION    = 0
                   Where  a.CLA_EMPRESA     = t1.CLA_EMPRESA
                   And    a.CLA_TRAB        = T1.CLA_TRAB
-                  And    a.NUM_NOMINA      = ( Select MAX(num_nomina)
+                  And    a.NUM_NOMINA      = ( Select Max(num_nomina)
                                                From   dbo.RH_DET_REC_HISTO
                                                Where  CLA_TRAB    = a.CLA_TRAB
                                                And    CLA_EMPRESA = a.CLA_EMPRESA)), 0.00) VARIABLE_IMSS,
