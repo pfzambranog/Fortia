@@ -1,0 +1,10 @@
+﻿<AssemblyExplorer>
+  <Assembly Path="C:\Windows\Microsoft.NET\Framework64\v4.0.30319\mscorlib.dll" />
+  <Assembly Path="C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.dll" />
+  <Assembly Path="C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Core.dll" />
+  <Assembly Path="C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Xml.dll" />
+  <Assembly Path="C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Data.dll" />
+  <Assembly Path="C:\Windows\Microsoft.NET\Framework64\v4.0.30319\System.Web.dll" />
+  <PhysicalFolder Path="C:\Terceros\fortia\senosiain\Recibos" Loaded="True" />
+  <Assembly Path="C:\Terceros\fortia\senosiain\Recibos\ITE.Adaptaciones.dll" />
+</AssemblyExplorer>
