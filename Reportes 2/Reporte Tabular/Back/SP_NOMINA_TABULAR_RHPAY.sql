@@ -217,11 +217,11 @@ Begin
                                End;
 
 --
--- Creaci髇 de Tablas Temporales.
+-- Creaci贸n de Tablas Temporales.
 --
 
 --
--- Tabla Temporal Raz髇 Social.
+-- Tabla Temporal Raz贸n Social.
 --
 
    Create Table #TmpRazon_Social
@@ -242,7 +242,7 @@ Begin
    Constraint TempEmpresaPk
    Primary Key (CLA_EMPRESA, CLA_RAZON_SOCIAL));
 
--- Tabla Temporal de Ubicaci髇.
+-- Tabla Temporal de Ubicaci贸n.
 
    Create Table #tmpUbicacion
   (CLA_EMPRESA         Integer      Not Null,
@@ -306,7 +306,7 @@ Begin
    Primary Key (CLA_EMPRESA, CLA_PUESTO));
 
 --
--- Tabla Temporal de Tipos de N髆ina.
+-- Tabla Temporal de Tipos de N贸mina.
 --
 
    Create Table #TmpTipoNom
@@ -316,7 +316,7 @@ Begin
    Primary Key (TIPO_NOMINA));
 
 --
--- Tabla Temporal de Periodos de N髆ina.
+-- Tabla Temporal de Periodos de N贸mina.
 --
 
    Create Table #TmpPeriodo
@@ -327,7 +327,7 @@ Begin
    Primary Key (CLA_EMPRESA, CLA_PERIODO));
 
 --
--- Tabla Temporal de Conceptos de N髆ina.
+-- Tabla Temporal de Conceptos de N贸mina.
 --
 
    Create  Table #tmpPerded
@@ -343,7 +343,7 @@ Begin
    Primary Key (CLA_EMPRESA, CLA_PERDED));
 
 --
--- Tabla Temporal de Calendatrio de N髆ina.
+-- Tabla Temporal de Calendatrio de N贸mina.
 --
 
    Create Table #tmpNominas
@@ -362,7 +362,7 @@ Begin
    Primary Key (CLA_EMPRESA, CLA_PERIODO, NUM_NOMINA));
 
 --
--- Tabla Temporal de Estatus de N髆ina.
+-- Tabla Temporal de Estatus de N贸mina.
 --
 
    Create Table #TmpEstatusNomina
@@ -393,7 +393,7 @@ Begin
    Primary Key (CLA_RAZON_SOCIAL, CLA_EMPRESA, CLA_TRAB));
 
 --
--- Tabla temporal de concepto de n髆ina de d韆s a pagar.
+-- Tabla temporal de concepto de n贸mina de d铆as a pagar.
 --
 
    Create Table  #TmpDIAS_POR_PAGAR
@@ -406,7 +406,7 @@ Begin
    Index DIAS_POR_PAGARIDX01 (cla_empresa, CLA_TRAB, CLA_PERIODO, NUM_NOMINA, ANIO_MES));
 
 --
--- Tabla de Relaci髇 Trabajadores N髆ina.
+-- Tabla de Relaci贸n Trabajadores N贸mina.
 --
 
    Create Table #tmpNominasTrab
@@ -493,14 +493,14 @@ Begin
    Set @w_idTabla = OBJECT_ID('tempdb.dbo.#tmpResultado')
 
 --
--- Tabla de Excepciones de columnas en la presentaci髇 de la columna.
+-- Tabla de Excepciones de columnas en la presentaci贸n de la columna.
 --
 
    Create Table #TempCamposExcepcion
   (Columna    Sysname Not Null Primary Key);
 
 --
--- Tabla de Presentaci髇 del Reporte.
+-- Tabla de Presentaci贸n del Reporte.
 --
 
    Create Table #tmpReporte
@@ -525,7 +525,7 @@ Begin
    Columna017        Varchar(500)         Null Default Char(32),
    Columna018        Varchar(500)         Null Default Char(32),
    Columna019        Varchar(500)         Null Default Char(32),
-   Columna020       Varchar(500)         Null Default Char(32),
+   Columna020        Varchar(500)         Null Default Char(32),
    Columna021        Varchar(500)         Null Default Char(32),
    Columna022        Varchar(500)         Null Default Char(32),
    Columna023        Varchar(500)         Null Default Char(32),
@@ -714,7 +714,7 @@ Begin
          If @w_regRZ = 0
             Begin
                Select @PnError   = 1,
-                      @PsMensaje = 'La Lista de Razon social Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de Razon social Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -750,7 +750,7 @@ Begin
          If @@Rowcount = 0
             Begin
                Select @PnError   = 2,
-                      @PsMensaje = 'La Lista de Empresas Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de Empresas Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -759,7 +759,7 @@ Begin
       End
 
 --
--- Filtro de Consulta de Ubicaci髇.
+-- Filtro de Consulta de Ubicaci贸n.
 --
 
    If Isnull(@PsCla_Ubicacion, '') = ''
@@ -786,7 +786,7 @@ Begin
          If  @w_regUbic = 0
             Begin
                Select @PnError   = 3,
-                      @PsMensaje = 'La Lista de Ubicaciones Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de Ubicaciones Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -821,7 +821,7 @@ Begin
          If @w_regCCO = 0
             Begin
                Select @PnError   = 4,
-                      @PsMensaje = 'La Lista de Centros de Costos Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de Centros de Costos Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -855,7 +855,7 @@ Begin
          If @@Rowcount = 0
             Begin
                Select @PnError   = 4,
-                      @PsMensaje = 'La Lista de Areas Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de Areas Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -895,7 +895,7 @@ Begin
          If @@Rowcount = 0
             Begin
                Select @PnError   = 5,
-                      @PsMensaje = 'La Lista de Departamentos Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de Departamentos Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -931,7 +931,7 @@ Begin
          If @@Rowcount = 0
             Begin
                Select @PnError   = 7,
-                      @PsMensaje = 'La Lista de los Puestos Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de los Puestos Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -968,7 +968,7 @@ Begin
          If  @w_reg = 0
             Begin
                Select @PnError   = 6,
-                      @PsMensaje = 'La Lista de los Regimen del IMSS Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de los Regimen del IMSS Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -998,7 +998,7 @@ Begin
          If @@Rowcount = 0
             Begin
                Select @PnError   = 7,
-                      @PsMensaje = 'La Lista de los tipos de n髆ina Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de los tipos de n贸mina Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -1007,7 +1007,7 @@ Begin
       End
 
 --
--- Filtro de Consulta de Per韔dos de Nomina
+-- Filtro de Consulta de Per铆odos de Nomina
 --
 
    If Isnull(@PsCla_Periodo, '') = ''
@@ -1034,7 +1034,7 @@ Begin
          If @@Rowcount = 0
             Begin
                Select @PnError   = 8,
-                      @PsMensaje = 'La Lista de los per韔dos de n髆ina Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de los per铆odos de n贸mina Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -1073,7 +1073,7 @@ Begin
         If @@Rowcount = 0
            Begin
               Select @PnError   = 3,
-                     @PsMensaje = 'La Lista de Estatus de N髆ina Esta Vac韆.'
+                     @PsMensaje = 'La Lista de Estatus de N贸mina Esta Vac铆a.'
 
               Select @PnError IdError, @PsMensaje Error
               Set Xact_Abort Off
@@ -1084,7 +1084,7 @@ Begin
      End
 
 --
--- Filtro de Consulta de Conceptos de n髆ina.
+-- Filtro de Consulta de Conceptos de n贸mina.
 --
 
    If Isnull(@PsCla_PerDed, '') = ''
@@ -1123,8 +1123,7 @@ Begin
          From   dbo.RH_PERDED  a
          Join   #TmpEmpresa    b
          On     b.CLA_EMPRESA     = a.CLA_EMPRESA
-         Where  a.NO_AFECTAR_NETO = 1
-         And    a.NO_IMPRIMIR     = 1
+         Where  a.NO_AFECTAR_NETO = 1             And    a.NO_IMPRIMIR     = 1
          And    a.ES_PROVISION    = 1
          And    @PbImprimeProv    = 1
       End
@@ -1164,7 +1163,7 @@ Begin
          If @@Rowcount = 0
             Begin
                Select @PnError   = 9,
-                      @PsMensaje = 'La Lista de Conceptos Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de Conceptos Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -1187,7 +1186,7 @@ Begin
    From   #tmpPerded t1;
 
 --
--- Filtro de Consulta de n髆inas.
+-- Filtro de Consulta de n贸minas.
 --
 
    If Isnull(@PsNominas, '') = ''
@@ -1234,7 +1233,7 @@ Begin
          If @@Rowcount = 0
             Begin
                Select @PnError   = 10,
-                      @PsMensaje = 'La Lista de N髆inas Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de N贸minas Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -1319,7 +1318,7 @@ Begin
          If @@Rowcount = 0
             Begin
                Select @PnError   = 11,
-                      @PsMensaje = 'La Lista de los Trabajadores Seleccionada no es es V醠ida'
+                      @PsMensaje = 'La Lista de los Trabajadores Seleccionada no es es V谩lida'
 
                Select @PnError IdError, @PsMensaje Error
                Set Xact_Abort Off
@@ -1328,7 +1327,7 @@ Begin
       End
 
 --
--- Consulta a los d韆s por pagar.
+-- Consulta a los d铆as por pagar.
 --
 
    Insert Into #TmpDIAS_POR_PAGAR
@@ -1339,14 +1338,14 @@ Begin
    --                                     Isnull(a.INCAP_ENF , 0) + Isnull(a.INCAP_MAT, 0) + Isnull(a.INCAP_RIES ,0)))) DIAS_POR_PAGAR
           Sum(     Isnull(a.dias_trab, 0) +     Isnull(a.dias_vac, 0) -     (         Isnull(a.F_JUST_SUE, 0) +         Isnull(a.F_INJUST, 0) +         Isnull(a.F_JUST_NSUE, 0) +         Isnull(a.INCAP_ENF, 0) +         Isnull(a.INCAP_MAT, 0) +         Isnull(
 
-                    a.INCAP_RIES, 0)     ) ) DIAS_POR_PAGAR -- JM 2025.29.05 - Se ajusta para recuperar los d韆s laborados correctamente--
+                    a.INCAP_RIES, 0)     ) ) DIAS_POR_PAGAR -- JM 2025.29.05 - Se ajusta para recuperar los d铆as laborados correctamente--
    From   dbo.RH_ENC_REC_HISTO a
    Join   #TmpEmpresa          E
    On     E.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
    And    E.CLA_EMPRESA      = a.CLA_EMPRESA
    Join   #TmpTrabajador       T
-   On     T.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
-   And    T.CLA_EMPRESA      = a.CLA_EMPRESA
+   On     T.CLA_EMPRESA      = a.CLA_EMPRESA
+--  And   T.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
    And    T.CLA_TRAB         = a.CLA_TRAB
    Join   #tmpNominas          c
    On     c.ANIO_MES         = a.ANIO_MES
@@ -1378,8 +1377,8 @@ Begin
          On     E.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
          And    E.CLA_EMPRESA      = a.CLA_EMPRESA
          Join   #TmpTrabajador       T
-         On     T.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
-         And    T.CLA_EMPRESA      = a.CLA_EMPRESA
+         On     T.CLA_EMPRESA      = a.CLA_EMPRESA
+ --      And    T.CLA_RAZON_SOCIAL = a.CLA_RAZON_SOCIAL
          And    T.CLA_TRAB         = a.CLA_TRAB
          Join   #tmpNominas          c
          On     c.ANIO_MES         = a.ANIO_MES_ISPT
@@ -1398,6 +1397,7 @@ Begin
                From   #TmpEstatusNomina
                Where  idEstatus = 9)
       Begin
+   
          Insert Into #tmpNominasTrab
         (CLA_RAZON_SOCIAL, NOM_RAZON_SOCIAL, CLA_EMPRESA,      NOM_EMPRESA,
          CLA_TRAB,         NOM_TRAB,         FECHA_ING,        FECHA_ING_GRUPO,
@@ -1440,7 +1440,7 @@ Begin
          And    te.CLA_EMPRESA      = t2.CLA_EMPRESA
          Join   #TmpTrabajador       t3
          On     t3.CLA_EMPRESA      = t2.CLA_EMPRESA
-         And    t3.CLA_RAZON_SOCIAL = t2.cla_razon_social
+--         And    t3.CLA_RAZON_SOCIAL = t2.cla_razon_social
          And    t3.CLA_TRAB         = t2.CLA_TRAB
          Join   #tmpRegImss           t4
          On     t4.CLA_EMPRESA      = t2.CLA_EMPRESA
@@ -1471,6 +1471,7 @@ Begin
                    t2.TOT_NETO,         t1.NOM_TIPO_NOMINA,
                    tr.CLA_PERDED,       tp.NOM_PERDED,        t3.FECHA_NACIMIENTO, t3.EDAD;
       End
+
 
    If @PbIncluyeNominaAbierta = 1 Or
       Exists              ( Select top 1 1
@@ -1519,7 +1520,7 @@ Begin
          And    trz.CLA_EMPRESA      = te.CLA_EMPRESA
          Join   #TmpTrabajador       t3
          On     t3.CLA_EMPRESA       = t2.CLA_EMPRESA
-         And   t3.CLA_TRAB          = t2.CLA_TRAB
+         And    t3.CLA_TRAB          = t2.CLA_TRAB
          Join   #tmpRegImss          t4
          On     t4.CLA_EMPRESA       = t2.CLA_EMPRESA
          And    t4.CLA_REG_IMSS      = t2.CLA_REG_IMSS
@@ -1559,7 +1560,7 @@ Begin
       Begin
            Begin
               Select @PnError   = 13,
-                     @PsMensaje = 'No Existen Coincidencias para los Par醡etros Seleccionados.'
+                     @PsMensaje = 'No Existen Coincidencias para los Par谩metros Seleccionados.'
 
               Select @PnError IdError, @PsMensaje Error
               Set Xact_Abort Off
@@ -1635,7 +1636,7 @@ Begin
 
 
 --
--- Adici髇 de Columnas de Conceptos de n髆ina a la tabla de Salida.
+-- Adici贸n de Columnas de Conceptos de n贸mina a la tabla de Salida.
 --
 
    Declare
@@ -1865,7 +1866,7 @@ Begin
       End
       
 --
--- Total por Ubicaci髇.
+-- Total por Ubicaci贸n.
 --
 
    Select  @w_regUbic = Count (distinct CLA_UBICACION)
@@ -1916,7 +1917,7 @@ Begin
 
 
 --
--- Total por Raz髇 Social.
+-- Total por Raz贸n Social.
 --
 
    If @w_regRZ > 1
