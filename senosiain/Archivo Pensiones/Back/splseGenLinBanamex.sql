@@ -492,7 +492,7 @@ Set @iParClaveMoneda = Isnull (@iParClaveMoneda, 0)
     Set @iCuentaTrab = Isnull (@iCuentaTrab, 0)
 
 --
---  Contabilizando el total de importes
+--  Contabilizando el total de Importes
 --
     Set @dImporte = 0
     SELECT  @dImporte = Sum(Isnull (importe, 0))
@@ -504,16 +504,15 @@ Set @iParClaveMoneda = Isnull (@iParClaveMoneda, 0)
 --  TABLA QUE CONTIENE LA INTERFAZ DE DEPÓSITOS CITI
 --
 
-    CREATE TABLE     #INTERFACE_CITI
-        (   secuencia_registro              NUMERIC (10)    NOT NULL IDENTITY,
+    CREATE TABLE #INTERFACE_CITI
+        (   secuencia_registro              Numeric (10)    NOT NULL Identity,
             cadena_interface                Varchar (500)
         )
-
 --
 --  CURSOR DE BENEFICIARIOS
 --
-DECLARE
 
+DECLARE
     CR_CUR_BENEFICIARIOS CURSOR FOR
     SELECT      nombre,
                 importe,
