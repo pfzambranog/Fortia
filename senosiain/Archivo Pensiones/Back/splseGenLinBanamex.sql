@@ -8,7 +8,7 @@ Alter Procedure splseGenLinBanamexPensiones2024
   @chDescripcion     Char  (30),
   @iOrdenamiento     Tinyint, -- 1 Alfabético, 2 Numérico
   @iSitTrabajador    Tinyint)
-as
+As
 
 ---------------------------------------------------------------------------------------------
 ---- Modificado por: Francisco Rodríguez
@@ -23,6 +23,10 @@ as
 ---- Modificado por: Pedro Zambrano
 ---- Última Modificación: 2025-08-07
 ---- Motivo: Se convierte el Script la codificación de Utf-8 a Ascii.
+
+---- Modificado por: Pedro Zambrano
+---- Última Modificación: 2025-08-14
+---- Motivo: Se Actualiza la clave del banco cuando es interbancario.
 
 ---------------------------------------------------------------------------------------------
 
@@ -396,22 +400,21 @@ Set @iParClaveMoneda = Isnull (@iParClaveMoneda, 0)
 --
 
     CREATE TABLE #TablaDepositos
-    (
-        NumCliente              Varchar     (5),
+    (   NumCliente              Varchar     (5),
         variable_per_09         Decimal     (15, 6),
         nombre_cia              Varchar     (100),
         NatArchivo              Varchar     (10),
-        VarLayout               Varchar        (10),
-        DeVolumen               Varchar        (10),
-        CarArchivo              Varchar        (10),
-        ParTipCuenta            Varchar        (10),
+        VarLayout               Varchar     (10),
+        DeVolumen               Varchar     (10),
+        CarArchivo              Varchar     (10),
+        ParTipCuenta            Varchar     (10),
         variable_per_08         Decimal     (15, 6),
         variable_per_07         Decimal     (15, 6),
-        ParTipOperaciones       Varchar        (10),
-        ParClaveMoneda          Varchar        (10),
+        ParTipOperaciones       Varchar     (10),
+        ParClaveMoneda          Varchar     (10),
         importe                 Decimal     (13, 2),
-        TipoCta                 Varchar        (10),
-        trabajadores            Varchar        (20),
+        TipoCta                 Varchar     (10),
+        trabajadores            Varchar     (20),
         nombre                  Varchar     (120),
         cuenta_deposito         Varchar     (40),
         sucursal                Varchar     (20),
@@ -440,14 +443,14 @@ Set @iParClaveMoneda = Isnull (@iParClaveMoneda, 0)
   '''' + RTRIM (Convert (Varchar (3), @iParClaveMoneda)) + ''' ParClaveMoneda, ' +
   'TRN.IMPORTE, ' +
        '''' + 'TipoCta' + ''' ' + ' = CASE ' +
-        ' WHEN LEN (RTRIM (LTRIM (INF.DATO_04))) > 0 ' +
+        ' WHEN Len (RTRIM (LTRIM (INF.DATO_04))) > 0 ' +
            ' THEN ''01''  ' +
            ' ELSE ''03''  ' +
        ' END, ' +
   'T.TRABAJADOR, ' +
   'Isnull (INF.DATO_09, '''') Beneficiario, '  +
   'Isnull (INF.DATO_05, '''') NoCuenta, ' +
-  'Isnull (INF.DATO_04,'''') Sucursal, '
+  'Isnull (INF.DATO_04,''0000'') Sucursal, '
 
  --  Ponemos las columnas fijas de parámetro
 --
@@ -468,8 +471,10 @@ Set @iParClaveMoneda = Isnull (@iParClaveMoneda, 0)
     ' AND INF.' + @chPenTipo + ' = ''' + @chBenDep + '''' +
     ' ORDER BY '
 
+ --
  -- Asignamos el orden correcto a los resultados
  --
+ 
  if @iOrdenamiento = 1
  begin
   Set @chSelect = @chSelect + ' TRN.TRABAJADOR'
@@ -532,37 +537,37 @@ DECLARE
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '1', 1)                     -- Registro de Control
 
     Set @chNumCliente = Convert (Varchar (12), @iNumCliente)                    -- Número de cliente
-    Set @chNumCliente = Replicate ('0', 12 - len (@chNumCliente)) + @chNumCliente
+    Set @chNumCliente = Replicate ('0', 12 - Len (@chNumCliente)) + @chNumCliente
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, @chNumCliente, 2)
 
     Set @chMesDeposito = Substring (@dFechaDeposito, 1, 3)                      -- Fecha de pago
 
     IF  @chMesDeposito In ('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
     BEGIN
-        Set @chMesDeposito = case
-                            WHEN    @chMesDeposito = 'Jan' THEN '01'
-                            WHEN    @chMesDeposito = 'Feb' THEN '02'
-                            WHEN    @chMesDeposito = 'Mar' THEN '03'
-                            WHEN    @chMesDeposito = 'Apr' THEN '04'
-                            WHEN    @chMesDeposito = 'May' THEN '05'
-                            WHEN    @chMesDeposito = 'Jun' THEN '06'
-                            WHEN    @chMesDeposito = 'Jul' THEN '07'
-                            WHEN    @chMesDeposito = 'Aug' THEN '08'
-                            WHEN    @chMesDeposito = 'Sep' THEN '09'
-                            WHEN    @chMesDeposito = 'Oct' THEN '10'
-                            WHEN    @chMesDeposito = 'Nov' THEN '11'
-                            WHEN    @chMesDeposito = 'Dec' THEN '12'
-                        end
+        Set @chMesDeposito = Case WHEN    @chMesDeposito = 'Jan' THEN '01'
+                                  WHEN    @chMesDeposito = 'Feb' THEN '02'
+                                  WHEN    @chMesDeposito = 'Mar' THEN '03'
+                                  WHEN    @chMesDeposito = 'Apr' THEN '04'
+                                  WHEN    @chMesDeposito = 'May' THEN '05'
+                                  WHEN    @chMesDeposito = 'Jun' THEN '06'
+                                  WHEN    @chMesDeposito = 'Jul' THEN '07'
+                                  WHEN    @chMesDeposito = 'Aug' THEN '08'
+                                  WHEN    @chMesDeposito = 'Sep' THEN '09'
+                                  WHEN    @chMesDeposito = 'Oct' THEN '10'
+                                  WHEN    @chMesDeposito = 'Nov' THEN '11'
+                                  WHEN    @chMesDeposito = 'Dec' THEN '12'
+                             End
 
-        Set @chFechaDeposito = SUBSTRING (@dFechaDeposito, 10, 2) +
-            SUBSTRING (@chMesDeposito, 1, 2) +
-            SUBSTRING (@dFechaDeposito, 5, 2)
+        Set @chFechaDeposito = Substring (@dFechaDeposito, 10, 2) +
+            Substring (@chMesDeposito, 1, 2) +
+            Substring (@dFechaDeposito, 5, 2)
     END
     ELSE
-        Set @chFechaDeposito =  SUBSTRING (@dFechaDeposito, 3, 2) +
-                                SUBSTRING (@dFechaDeposito, 6, 2) +
-                                SUBSTRING (@dFechaDeposito, 9, 2)
-
+       Begin
+          Set @chFechaDeposito =  Substring (@dFechaDeposito, 3, 2) +
+                                  Substring (@dFechaDeposito, 6, 2) +
+                                  Substring (@dFechaDeposito, 9, 2)
+       End
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, @chFechaDeposito, 14)
 
     IF EXISTS           -- Consecutivo del archivo
@@ -591,7 +596,7 @@ DECLARE
     END
 
     Set @chConsecutivo = Convert (Varchar (4), @iConsecutivo)
-    Set @chConsecutivo = replicate ('0', 4 - LEN (@chConsecutivo)) + RTRIM (LTRIM (@chConsecutivo))
+    Set @chConsecutivo = replicate ('0', 4 - Len (@chConsecutivo)) + RTRIM (LTRIM (@chConsecutivo))
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, @chConsecutivo, 20)
 
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, @chNomEmpresa, 24)                          -- Nombre de la empresa
@@ -617,7 +622,7 @@ DECLARE
     Set @chImporte18 = Convert (Varchar (18), @dImporte)                                         -- Importe a cargar
     Set @chImporte18 = Replace (@chImporte18, '.', '')
     Set @chImporte18 = RTRIM (LTRIM(@chImporte18))
-    Set @chImporte18 = REPLICATE ('0', 18 - LEN (@chImporte18)) + @chImporte18
+    Set @chImporte18 = REPLICATE ('0', 18 - Len (@chImporte18)) + @chImporte18
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, @chImporte18, 6)
 
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '01', 24)                                   -- Tipo de cuenta
@@ -627,7 +632,7 @@ DECLARE
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, @chCtaFondeo, 39)                           -- Número de Cuenta - Número de Cuenta
 
     Set @chCuentaTrab = Convert (Varchar (6), @iCuentaTrab)                                     -- Número de Abonos
-    Set @chCuentaTrab = replicate ('0', 6 -len (@chCuentaTrab)) + @chCuentaTrab
+    Set @chCuentaTrab = replicate ('0', 6 -Len (@chCuentaTrab)) + @chCuentaTrab
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, @chCuentaTrab, 46)
 
     INSERT INTO #INTERFACE_CITI
@@ -640,13 +645,12 @@ DECLARE
 --
     Set @chFinCursor = 'NO'
 
-    OPEN CR_CUR_BENEFICIARIOS
-
-    FETCH       CR_CUR_BENEFICIARIOS
-        INTO    @chNombre,
-                @cImporte,
-                @chSucursal,
-                @chCuentaDeposito
+    OPEN   CR_CUR_BENEFICIARIOS
+    FETCH  CR_CUR_BENEFICIARIOS
+    INTO   @chNombre,
+           @cImporte,
+           @chSucursal,
+           @chCuentaDeposito
 
     IF  @@FETCH_STATUS <> 0
 
@@ -667,7 +671,7 @@ DECLARE
 -- Metodo de Pago.
 --
 
-        If LEN (@chCuentaDeposito) = 18
+        If Len (@chCuentaDeposito) = 18
            Begin
               Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '002', 3)
            End
@@ -693,7 +697,7 @@ DECLARE
              End
           Else
              Begin
-                -- Pago Pendiones.
+                -- Pago Pensiones.
                 Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '54', 6)
              End
        End
@@ -707,7 +711,7 @@ DECLARE
 
         Set @chImporte18 = RTRIM (LTRIM (Convert (Varchar (18), @cImporte)))                        -- Importe
         Set @chImporte18 = REPLACE (@chImporte18, '.', '')
-        Set @chImporte18 = REPLICATE ('0', 18 - LEN (@chImporte18)) + RTRIM (LTRIM (@chImporte18))
+        Set @chImporte18 = REPLICATE ('0', 18 - Len (@chImporte18)) + RTRIM (LTRIM (@chImporte18))
         Set @chCadena = dbo.fnlseArmaCadena (@chCadena, @chImporte18, 11)                           -- Importe
 
 --
@@ -715,13 +719,13 @@ DECLARE
 --
 
         Set @chCuentaDeposito = RTRIM (LTRIM (@chCuentaDeposito))
-        IF  LEN (@chCuentaDeposito) = 16
+        IF  Len (@chCuentaDeposito) = 16
             Begin
                Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '03', 29)
             End
         else
             Begin
-               If LEN (@chCuentaDeposito) = 18
+               If Len (@chCuentaDeposito) = 18
                   Begin
                      Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '40', 29)
                   End
@@ -731,19 +735,21 @@ DECLARE
                   End
             End
 
-        Set @chSucursal = RTRIM (LTRIM (@chSucursal))                     -- Número de cuenta de abono
+        -- Número de cuenta de abono
+        
+        Set @chSucursal       = RTRIM (LTRIM (@chSucursal)) 
         Set @chCuentaDeposito = RTRIM (LTRIM (@chCuentaDeposito))
 
 
-        IF  LEN (@chCuentaDeposito) < 16
+        IF  Len (@chCuentaDeposito) < 16
             BEGIN
                Set @chCuenta20 = REPLICATE ('0', 9)
-               Set @chCuenta20 = @chCuenta20 + REPLICATE ('0', 4 - LEN (@chSucursal)) + @chSucursal        --      Sucursal
-               Set @chCuenta20 = @chCuenta20 + REPLICATE ('0', 7 - LEN (@chCuentaDeposito)) + @chCuentaDeposito    --  Cuenta
+               Set @chCuenta20 = @chCuenta20 + REPLICATE ('0', 4 - Len (@chSucursal)) + @chSucursal        --      Sucursal
+               Set @chCuenta20 = @chCuenta20 + REPLICATE ('0', 7 - Len (@chCuentaDeposito)) + @chCuentaDeposito    --  Cuenta
             END
         ELSE
            Begin
-               If LEN (@chCuentaDeposito) = 18
+               If Len (@chCuentaDeposito) = 18
                   Begin
                      Set @chCuenta20 = '00' + @chCuentaDeposito
                   End
@@ -759,7 +765,7 @@ DECLARE
 -- Referencia del pago
 --
 
-        If LEN (@chCuentaDeposito) = 18
+        If Len (@chCuentaDeposito) = 18
            Begin
               Set @w_referencia = Cast(@iAnio As Char(4)) + '0' +
                                   Case When Len(@iPeriodo) < 2
@@ -795,8 +801,25 @@ DECLARE
         Set @chCadena = dbo.fnlseArmaCadena (@chCadena, ' ', 122)                                   -- Referencia 1
         Set @chCadena = dbo.fnlseArmaCadena (@chCadena, ' ', 157)                                   -- Referencia 2
         Set @chCadena = dbo.fnlseArmaCadena (@chCadena, ' ', 192)                                   -- Referencia 3
-        Set @chCadena = dbo.fnlseArmaCadena (@chCadena, ' ', 227)                                   -- Referencia 4
-        Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '0000', 262)                                -- Clave de banco
+        Set @chCadena = dbo.fnlseArmaCadena (@chCadena, ' ', 227)                                  -- Referencia 4
+
+--
+-- Clave de banco
+-- Ajuste del 14/08/2025
+--
+        If Len (@chCuentaDeposito) != 18
+           Begin
+              Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '0000', 262) 
+           End
+        Else
+           Begin
+              Set @chCadena = dbo.fnlseArmaCadena (@chCadena, 
+                              '0' + Substring(@chCuentaDeposito, 1, 3), 262) 
+           End
+--
+-- Fin de Ajuste del 14/08/2025
+--
+
         Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '00', 266)                                  -- Plazo
         Set @chCadena = dbo.fnlseArmaCadena (@chCadena, ' ', 268)                                   -- RFC
         Set @chCadena = dbo.fnlseArmaCadena (@chCadena, ' ', 282)                                   -- IVA
@@ -808,11 +831,11 @@ DECLARE
          values
             (@chCadena)
 
-        FETCH       CR_CUR_BENEFICIARIOS
-            INTO    @chNombre,
-                    @cImporte,
-                    @chSucursal,
-                    @chCuentaDeposito
+        FETCH   CR_CUR_BENEFICIARIOS
+        INTO    @chNombre,
+                @cImporte,
+                @chSucursal,
+                @chCuentaDeposito
 
         IF  @@FETCH_STATUS <> 0
 
@@ -830,13 +853,13 @@ DECLARE
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '001', 2)                                       -- Clave de la moneda
 
     Set @chNumeroAbonos6 = Convert (Varchar (6), @iCuentaTrab)                                      -- Número de abonos
-    Set @chNumeroAbonos6 = REPLICATE ('0', 6 - LEN (@chNumeroAbonos6)) + @chNumeroAbonos6
+    Set @chNumeroAbonos6 = REPLICATE ('0', 6 - Len (@chNumeroAbonos6)) + @chNumeroAbonos6
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, @chNumeroAbonos6, 5)
 
     Set @chImporte18 = Convert (Varchar (18), @dImporte)                                            -- Importe total de abonos
     Set @chImporte18 = REPLACE (@chImporte18, '.', '')
     Set @chImporte18 = RTRIM (LTRIM(@chImporte18))
-    Set @chImporte18 = REPLICATE ('0', 18 - LEN (@chImporte18)) + @chImporte18
+    Set @chImporte18 = REPLICATE ('0', 18 - Len (@chImporte18)) + @chImporte18
 
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, @chImporte18, 11)                               -- Importe total de abonos
     Set @chCadena = dbo.fnlseArmaCadena (@chCadena, '000001', 29)                                   -- Número de abonos
