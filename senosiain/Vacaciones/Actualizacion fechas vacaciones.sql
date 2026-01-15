@@ -3,9 +3,9 @@ Declare
    @w_fecha_ingreso   Date,
    @w_fecha_caducidad Date,
    @w_cilo_Laboral    Char(8)  = '20182019'
-   
+
 Select @w_fecha_ingreso   = DateAdd(mm, 12, fecha_ingreso),
-       @w_fecha_caducidad = DateAdd(mm, 36, fecha_ingreso) 
+       @w_fecha_caducidad = DateAdd(mm, 36, fecha_ingreso)
 from   trabajadores_grales
 Where  compania   = 'LS'
 And    trabajador = @w_trabajador;
@@ -17,7 +17,7 @@ Begin Transaction
    Where  compania      = 'LS'
    And    trabajador    = @w_trabajador
    And    ciclo_laboral = @w_cilo_Laboral;
-   
+
    Select *
    from   dbo.saldos_vacaciones
    Where  compania      = 'LS'
@@ -26,5 +26,5 @@ Begin Transaction
 
 commit Transaction
 
-    
+
 
