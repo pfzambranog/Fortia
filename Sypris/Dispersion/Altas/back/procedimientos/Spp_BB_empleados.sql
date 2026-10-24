@@ -61,6 +61,7 @@ Declare
    @w_fuente              Varchar ( 255),
    @w_descripcion         Varchar ( 255),
    @w_inst_deposito       Char(      20),
+   @w_inst_tarjeta        Char(      20),
    @w_cuentaEmpresa       Char(      20),
    @w_comilla             Char(       1),
    @w_gAfinidad           Char(       9),
@@ -108,7 +109,6 @@ Begin
          Set Xact_Abort         On
          Return
       End
-
 
    If Not Exists (Select Top 1 1
                   From   dbo.aut_companias
@@ -261,14 +261,53 @@ Begin
                   Where  Compania  = @PsCompania
                   And    idEstatus = 0)
       Begin
-         Select @PnEstatus  = 8012,
+         Select @PnEstatus  = 8013,
                 @PsMensaje  = 'Error: No Existen Registros Pendientes, para Procesar el Reporte';
 
          Set Xact_Abort         On
          Raiserror (@PsMensaje, 16, 1)
-
+         Return
       End
 
+   Select @w_inst_tarjeta = ltrim(ltrim(descripcion))
+   From   dbo.criterios_valores
+   Where  campo  = 'BCOBAJIO'
+   And    item   = 12;
+   If @@Rowcount = 0
+      Begin
+         Select @PnEstatus = 8014,
+                @PsMensaje = 'Error: El parámetro de entidad bancaria (Tarjeta) no existe. Validar con el Addministrador de Adam.';
+
+         Set Xact_Abort         On
+         Raiserror (@PsMensaje, 16, 1)
+         Return
+      End
+      
+   If Not Exists ( Select Top 1 1
+                   From   dbo.ins_depositos
+                   Where  institucion_deposito = @w_inst_tarjeta)
+      Begin
+         Select @PnEstatus = 8015,
+                @PsMensaje = 'Error: El parámetro de entidad bancaria no se corresponde con la Banco Bajio. Validar con el Addministrador de Adam.';
+
+         Set Xact_Abort         On
+         Raiserror (@PsMensaje, 16, 1)
+         Return
+      End
+
+   If Not Exists ( Select Top 1 1
+                   From   dbo.rel_trab_ins_dep
+                   Where  compania             = @PsCompania
+                   And    institucion_deposito = @w_inst_deposito)
+      Begin
+         Select @PnEstatus = 8016,
+                @PsMensaje = 'Error: No existen Trabajadores Relacionados a Banco Bajio. Validar con el Addministrador de Adam.';
+
+         Set Xact_Abort         On
+         Raiserror (@PsMensaje, 16, 1)
+         Return
+      End
+      
 
    If @PbSalida = 1
       Begin
@@ -279,7 +318,7 @@ Begin
          If @@Rowcount        = 0 Or
             @w_rutaCompleta  Is Null
             Begin
-               Select @PnEstatus  = 8013,
+               Select @PnEstatus  = 8017,
                       @PsMensaje  = 'Error: La ruta y nombre del archivo de salida está parametrizado';
 
                Set Xact_Abort         On
@@ -327,7 +366,7 @@ Begin
    tipoOperacion    Char(  1)        Not Null Default '1',
    numcuenta        Char( 20)        Not Null Default Char(32),   -- Numerico
    tipoCuenta       Char(  7)        Not Null Default 'Maestra',
-   noTarjeta        Char( 16)        Not Null Default Replicate('0', 16),     -- Numerico
+   tarjeta        Char( 16)        Not Null Default Replicate('0', 16),     -- Numerico
    enviar           Char(  1)        Not Null Default 'C',
    nombreCorto      Char( 24)        Not Null Default Char(32),
    primerNombre     Char( 19)        Not Null Default Char(32),
@@ -425,7 +464,7 @@ Begin
 
    Begin Try
       Insert Into #TempDetalle
-     (trabajador,      numcuenta,       noTarjeta,    nombreCorto,
+     (trabajador,      numcuenta,       tarjeta,    nombreCorto,
       primerNombre,    segundoNombre,
       apellidoPaterno, apellidoMaterno, sexo,         fechaNacimiento,
       RFC,             CURP,            calleNumero,  coloniaPoblacion,
@@ -452,7 +491,7 @@ Begin
                      Where  trabajador = a.trabajador
                      And    Isnull(codigo_postal, '') != ''
                      And    Isnumeric(codigo_postal)   = 1), '00000'),
-             Isnull(Replicate('0', 3 - Len(dbo.Fn_BuscaClaveLada(a.trabajador))) + dbo.Fn_BuscaClaveLada(a.trabajador), '000'),
+             Isnull(Replicate('0', 3 - Len(dbo.Fn_BuscaClaveLada(a.trabajador)))  + dbo.Fn_BuscaClaveLada(a.trabajador), '000'),
              Isnull(Replicate('0', 7 - Len(Substring(telefono_particular, 4, 7))) + Substring(telefono_particular, 4, 7), '0000000'),
              Substring(Isnull(e_mail, ' '), 1, 30),
              Substring(dbo.Fn_BuscaEdoCivil(a.compania, a.trabajador), 1, 1)
@@ -511,7 +550,7 @@ Begin
 
      Update  #TempDetalle
      Set     linea = identificador    + tipoOperacion   + numcuenta       + tipoCuenta      +
-                     noTarjeta        + enviar          + nombreCorto     + primerNombre    +
+                     tarjeta        + enviar          + nombreCorto     + primerNombre    +
                      segundoNombre    + apellidoPaterno + apellidoMaterno + sexo            +
                      fechaNacimiento  + RFC             + CURP            + calleNumero     +
                      coloniaPoblacion + municipio       + estado          + localidad       +
@@ -582,7 +621,7 @@ Begin
    Else
       Begin
          Select Linea
-         From   #TempSalidaBajio
+         From   dbo.TempSalidaBajio
          Order  by Secuencia;
      End;
 
@@ -634,6 +673,40 @@ Begin
                                                    Where  compania                 = a.compania
                                                    And    Rtrim(Ltrim(trabajador)) = Rtrim(Ltrim(a.trabajador))
                                                    And    institucion_deposito     = @w_inst_deposito);
+--
+-- Actualización Datos de tarjeta
+--
+               Update dbo.rel_trab_ins_dep
+               Set    cuenta_deposito   = b.tarjeta
+               From   dbo.rel_trab_ins_dep     a
+               Join   dbo.BB_AltasEmpleadosTbl b
+               On     b.compania                 = a.compania
+               And    Rtrim(Ltrim(b.trabajador)) = Rtrim(Ltrim(a.trabajador))
+               And    b.idEstatus                = 0
+               Join   dbo.trabajadores_grales  c
+               On     c.compania                 = a.Compania
+               And    c.trabajador               = a.trabajador
+               And    c.sit_trabajador           = 1
+               Where  a.institucion_deposito     = @w_inst_tarjeta
+            
+               Insert Into dbo.rel_trab_ins_dep
+               (compania,         trabajador, institucion_deposito, cuenta_deposito,
+                ins_dep_principal)
+               Select a.compania, a.trabajador, @w_inst_tarjeta, a.tarjeta,
+                      0
+               From   dbo.BB_AltasEmpleadosTbl a
+               Join   dbo.trabajadores_grales  b
+               On     b.compania                 = a.Compania
+               And    Rtrim(Ltrim(b.trabajador)) = Rtrim(Ltrim(a.trabajador))
+               And    b.sit_trabajador           = 1
+               Where  a.idEstatus                = 0
+               And    Not Exists                 ( Select Top 1 1
+                                                   From   dbo.rel_trab_ins_dep
+                                                   Where  compania                 = a.compania
+                                                   And    Rtrim(Ltrim(trabajador)) = Rtrim(Ltrim(a.trabajador))
+                                                   And    institucion_deposito     = @w_inst_tarjeta);
+--
+               
                Update dbo.BB_AltasEmpleadosTbl
                Set    idEstatus     = 1,
                       fechaProceso  = Getdate()

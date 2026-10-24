@@ -19,7 +19,7 @@ If Not Exists ( Select *
                 Where  operacion = 'BBOPER02')
    Begin
       Execute dbo.sp_alta_operaciones  @operacion        = 'BBOPER02',  
-                                       @descripcion_ope  = 'Generación de Layout Banco Bajío ',  
+                                       @descripcion_ope  = 'Generación de Layout Alta Empleados Banco Bajío ',  
                                        @icono            = 1,  
                                        @tipo_operacion   = 2,  
                                        @ejecuta_llamada  = Null,  
