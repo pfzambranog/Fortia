@@ -2,35 +2,46 @@ Use Adam
 Go
 
 
-/*
-Declare
-   @PsCompania            Char(     4)    = '1',
-   @PnId_Calendario       Integer         = 1095,
-   @PsOperacion           Char(     8)    = 'BBDISP01',
-   @PsUsuario             Char(    20)    = 'ADAM',
-   @PbSalida              Bit             = 1,
-   @PnEstatus             Integer         = 0,
-   @PsMensaje             Varchar(250)    = Null;
-Begin
+-- /*
+-- Declare
+   -- @PsCompania            Char(     4),
+   -- @PnId_Calendario       Integer     ,
+   -- @PsOperacion           Char(     8),
+   -- @PsUsuario             Char(    20),
+   -- @PbSalida              Bit         ,
+   -- @PsIdSession           Varchar(100),
+   -- @PnEstatus             Integer     ,
+   -- @PsMensaje             Varchar(512);
+-- Begin
 
-   Execute dbo.Spp_genLayoutBajio @PsCompania      = @PsCompania,
-                                  @PnId_Calendario = @PnId_Calendario,
-                                  @PsOperacion     = @PsOperacion,
-                                  @PsUsuario       = @PsUsuario,
-                                  @PbSalida        = @PbSalida,
-                                  @PnEstatus       = @PnEstatus Output,
-                                  @PsMensaje       = @PsMensaje Output;
+   -- Select @PsCompania          = 'SYPR',
+          -- @PnId_Calendario     = 2662,
+          -- @PsOperacion         = 'BBDISP01',
+          -- @PsUsuario           = 'jnava',
+          -- @PbSalida            = 1,
+          -- @PsIdSession         = 'BBDISP01',
+          -- @PnEstatus           = 0,
+          -- @PsMensaje           = Null;
 
-   If @PnEstatus != 0
-      Begin
-         Select @PnEstatus  IdError, @PsMensaje MensajeError;
-     End
+   -- Execute dbo.Spp_genLayoutBajio @PsCompania      = @PsCompania,
+                                  -- @PnId_Calendario = @PnId_Calendario,
+                                  -- @PsOperacion     = @PsOperacion,
+                                  -- @PsUsuario       = @PsUsuario,
+                                  -- @PbSalida        = @PbSalida,
+                                  -- @PsIdSession     = @PsIdSession,
+                                  -- @PnEstatus       = @PnEstatus Output,
+                                  -- @PsMensaje       = @PsMensaje Output;
 
-   Return;
+   -- If @PnEstatus != 0
+      -- Begin
+         -- Select @PnEstatus  IdError, @PsMensaje MensajeError;
+     -- End
 
-End;
-Go
-*/
+   -- Return;
+
+-- End;
+-- Go
+-- */
 
 If Exists ( Select Top 1 1
             From   sysobjects
@@ -47,9 +58,10 @@ Create Procedure dbo.Spp_genLayoutBajio
    @PnId_Calendario       Integer,
    @PsOperacion           Char(     8),
    @PsUsuario             Char(    20),
+   @PsIdSession           Varchar(100),
    @PbSalida              Tinyint         = 0,                          -- 0 = 1 = Archivo Texto en DD,
    @PnEstatus             Integer         = 0    Output,
-   @PsMensaje             Varchar(250)    = Null Output)
+   @PsMensaje             Varchar(512)    = Null Output)
 As
 
 Declare
@@ -83,7 +95,6 @@ Declare
    @w_server              Sysname,
    @w_dbname              Sysname,
    @w_tabla               Sysname,
-   @w_tablaProc           Sysname,
    @w_total_importe       Numeric(18, 2);
 
 Begin
@@ -92,6 +103,10 @@ Begin
   Descripción:    Procedimiento que genera archivo txt de dispersión de Nómina Banco Bajio.
   Creacion:       23-oct-2026.
   Version:        1.0
+  Modificacion:   Ajuste en el manejo de mensajes de errores.
+                  Ajuste al la leyeda del motivo de la nómina.
+  Fecha:          10-Nov-2026
+  Version:        2.0
 */
 
    Set Quoted_identifier Off
@@ -105,8 +120,7 @@ Begin
           @w_comilla         = Char(39),
           @w_fechaGeneracion = Replace(Convert(Char(11), GetDate(), 102), '.', ''),
           @w_server          = @@Servername,
-          @w_dbname          = Db_name(),
-          @w_tablaProc       = Replace('TablaLayoutBB_' + Substring(Cast(NEWID() as NVarchar(Max)), 1, 10), '-', '_');
+          @w_dbname          = Db_name();
 
 --
 -- Validaciones y Consulta de Parametros
@@ -172,9 +186,9 @@ Begin
       End
 
    Select @w_fecha_pago = Replace(Convert(Char(11), fecha_pago, 102), '.', ''),
-          @w_leyenda    = 'Nómina: ' + tipo_nomina + ', Período: ' + Cast(periodo As Varchar) +
-                                  ', Año ' + Right('0000' + Cast(Anio As Char(4)), 4)
-   From   calendario_procesos
+          @w_leyenda    = 'Nomina: ' + tipo_nomina + ', Periodo: ' + Cast(periodo As Varchar) +
+                                  ', Anio: ' + Right('0000' + Cast(Anio As Char(4)), 4)
+   From   dbo.calendario_procesos
    Where  id_calendario = @PnId_Calendario;
 
    If @w_sit_periodo > 2
@@ -197,7 +211,7 @@ Begin
    If @w_sit_periodo = 1
       Begin
          If Exists (Select top 1 1
-                    From   transacciones_ns
+                    From   dbo.transacciones_ns
                     Where  compania        = @PsCompania
                     And    id_calendario   = @PnId_calendario
                     And    sit_transaccion = 1)
@@ -228,7 +242,7 @@ Begin
 
    Select @w_conc_neto = Isnull(entero, 0)
    From   dbo.parametros_rh
-   Where  compania            = '1'
+   Where  compania            = @PsCompania
    And    parametro_rh        = 'Conc_Neto'
    And    secuencia_parametro = 1
    If @@Rowcount   = 0 Or
@@ -489,35 +503,6 @@ Begin
    filler1            Char(145)         Not Null Default Replicate(Char(32), 145),
    linea              Char(181)         Not Null Default Char(32));
 
-   Begin Try
-      If Exists (Select Top 1 1
-                 From   Sys.tables
-                 Where  name = @w_tablaProc)
-         Begin
-            Set @w_sql = 'Drop Table ' + @w_tablaProc
-            Execute (@w_sql)
-        End
-
-      Set @w_sql = 'Create Table ' + @w_tablaProc +
-                  '(secuencia        Integer          Not Null Identity (1, 1) Primary Key, ' +
-                   'linea            Char(181)        Not Null Default Char(32))'
-      Execute (@w_sql)
-   End Try
-
-   Begin Catch
-      Select  @w_Error      = Error_number(),
-              @w_linea      = Error_line(),
-              @w_desc_error = Substring (Error_Message(), 1, 230)
-   End   Catch
-
-   If IsNull(@w_Error, 0) <> 0
-      Begin
-         Select @PnEstatus = @w_error,
-                @PsMensaje = 'Error.: ' + Rtrim(@w_desc_error) + ' en linea ' + Cast(@w_linea as Varchar);
-
-         Goto Salida
-      End;
-
 --
 -- Inicio de Proceso.
 --
@@ -526,36 +511,46 @@ Begin
 -- Impresion Cabecero
 --
 
-   Begin Try
-      Insert Into #TempCabecero
-     (bancoReceptor,  codigo, gAfinidad, fechaGeneracion, numerocuenta)
-      Values(@w_bancoReceptor, @w_codigoNomina, @w_gAfinidad, @w_fechaGeneracion, @w_cuentaEmpresa)
+   Insert Into #TempCabecero
+  (bancoReceptor,  codigo, gAfinidad, fechaGeneracion, numerocuenta)
+   Values(@w_bancoReceptor, @w_codigoNomina, @w_gAfinidad, @w_fechaGeneracion, @w_cuentaEmpresa)
 
-      Update #TempCabecero
-      Set    Linea = tipoRegistro + numSecuencia + bancoReceptor + sentido         +
-                     codigo       + filler1      + gAfinidad     + fechaGeneracion +
-                     numerocuenta + usofuturo;
-
-      Set @w_sql = 'Insert Into ' + @w_tablaProc +
-                   '(linea)' +
-                   'Select Linea ' +
-                   'From   #TempCabecero'
-     Execute (@w_sql)
-   End Try
-
-   Begin Catch
-      Select  @w_Error      = Error_number(),
-              @w_linea      = Error_line(),
-              @w_desc_error = Substring (Error_Message(), 1, 230)
-   End   Catch
-
-   If IsNull(@w_Error, 0) <> 0
+   Set @w_Error = @@Error
+   If @w_error != 0
       Begin
          Select @PnEstatus = @w_error,
-                @PsMensaje = 'Error.: ' + Rtrim(@w_desc_error) + ' en linea ' + Cast(@w_linea as Varchar);
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
 
-         Goto Salida
-      End;
+      End
+
+   Update #TempCabecero
+   Set    Linea = tipoRegistro + numSecuencia + bancoReceptor + sentido         +
+                  codigo       + filler1      + gAfinidad     + fechaGeneracion +
+                  numerocuenta + usofuturo;
+
+   Set @w_Error = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+
+      End
+
+   Insert Into dbo.BB_DispersionTbl
+  (idSession, linea)
+   Select @PsIdSession, Linea
+   From   #TempCabecero;
+
+   Set @w_Error = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+
+      End
 
 --
 -- Impresion detalle
@@ -564,7 +559,7 @@ Begin
    Set @w_sql = 'Select ' + @w_comilla + @w_codigoNomina                    + @w_comilla + ', '  +
                             @w_comilla + @w_fechaGeneracion                 + @w_comilla + ', '  +
                             @w_comilla + @w_bancoReceptor                   + @w_comilla + ', '  +
-                            'Cast(a.importe As Varchar), '                                       +
+                            'Convert(Char(15), Convert(money, a.importe * 100)), '               +
                             @w_comilla + @w_fecha_pago                      + @w_comilla + ', '  +
                             @w_comilla + @w_cuentaEmpresa                   + @w_comilla + ', '  +
                             'Substring(dbo.Fn_BuscaCuentaBancTrabajador(a.compania, a.trabajador, '        +
@@ -584,94 +579,152 @@ Begin
                                        'And    usuario      = ' + @w_comilla + @PsUsuario + @w_comilla + ') ' +
                 'Order  By a.trabajador'
 
-   Begin Try
-      Insert Into #TempDetalle
-     (codigoOperacion, fechaPresentacion,  banco,
-      importe,         fechaAplicacion,    cuentaEmisor,
-      cuentaTrab,      numero,             leyenda,
-      tarjeta)
-      Execute(@w_sql)
-      Set @w_registros = @@Identity
+   Insert Into #TempDetalle
+  (codigoOperacion, fechaPresentacion,  banco,
+   importe,         fechaAplicacion,    cuentaEmisor,
+   cuentaTrab,      numero,             leyenda,
+   tarjeta)
+   Execute(@w_sql)
+   Set @w_error     = @@Error
+   Set @w_registros = @@Identity
 
-      Update #TempDetalle
-      Set    numeroSecuencia = Right('0000000' + Cast(secuencia As Varchar), 7),
-             importe         = Right(Replicate('0', 15) + rtrim(ltrim(importe)), 15),
-             cuentaTrab      = Right(Replicate('0', 20) + rtrim(ltrim(cuentaTrab)), 20),
-             numero          = Right(Replicate('0',  7) + rtrim(ltrim(numero)), 7),
-             tarjeta         = Right(Replicate('0', 30) + rtrim(ltrim(numero)), 30);
-
-     Update #TempDetalle
-     Set    linea =   tipoRegistro  + numeroSecuencia  + codigoOperacion + fechaPresentacion  +
-                      filler1       + banco            + importe         + fechaAplicacion  +
-                      fillerEmisor1 + cuentaEmisor     + fillerEmisor2   + fillerReceptora1 +
-                      cuentaTrab    + fillerReceptora2 + numero          + leyenda          +
-                      tarjeta       + filler2;
-
-      Set @w_sql = 'Insert Into ' + @w_tablaProc +
-                   '(linea)' +
-                   'Select Linea ' +
-                   'From   #TempDetalle'
-     Execute (@w_sql)
-
-   End Try
-
-   Begin Catch
-      Select  @w_Error      = Error_number(),
-              @w_linea      = Error_line(),
-              @w_desc_error = Substring (Error_Message(), 1, 230)
-   End   Catch
-
-   If IsNull(@w_Error, 0) <> 0
+   If @w_error != 0
       Begin
          Select @PnEstatus = @w_error,
-                @PsMensaje = 'Error.: ' + Rtrim(@w_desc_error) + ' en linea ' + Cast(@w_linea as Varchar);
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
 
-         Set Xact_Abort         Off
-         Raiserror (@PsMensaje, 16, 1)
-         Return
-      End;
+      End
+
+   Update #TempDetalle
+   Set    importe = Substring(importe, 1, patindex('%.%', importe) -1);
+
+   Set @w_error     = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+
+      End
+
+   Update #TempDetalle
+   Set    numeroSecuencia = Right('0000000' + Cast(secuencia As Varchar), 7),
+          importe         = Right(Replicate('0', 15) + rtrim(ltrim(importe * 100)), 15),
+          cuentaTrab      = Right(Replicate('0', 20) + rtrim(ltrim(cuentaTrab)), 20),
+          numero          = Right(Replicate('0',  7) + rtrim(ltrim(numero)), 7),
+          tarjeta         = Right(Replicate('0', 30) + rtrim(ltrim(numero)), 30);
+
+   Set @w_error     = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+
+      End
+
+   Update #TempDetalle
+   Set    linea =   tipoRegistro  + numeroSecuencia  + codigoOperacion + fechaPresentacion  +
+                    filler1       + banco            + importe         + fechaAplicacion  +
+                    fillerEmisor1 + cuentaEmisor     + fillerEmisor2   + fillerReceptora1 +
+                    cuentaTrab    + fillerReceptora2 + numero          + leyenda          +
+                    tarjeta       + filler2;
+
+   Set @w_error     = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+
+      End
+
+   Insert Into dbo.BB_DispersionTbl
+  (idSession, linea)
+   Select @PsIdSession, Linea
+   From   #TempDetalle;
+
+   Set @w_error     = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+
+      End
+
 
 --
 -- Impresion Línea de Sumario.
 --
-   Begin Try
-      Insert Into #TempSumario
-     (numeroSecuencia, codigoOperacion, cantRegistros, importeTotal)
-      Select Cast( @w_registros + 1 As Varchar),  @w_codigoNomina, Cast( @w_registros as Varchar),
-             Cast(@w_total_importe As Varchar)
 
-      Update #TempSumario
-      Set    numeroSecuencia = Right(Replicate('0', 7) + Ltrim(Rtrim(numeroSecuencia)), 7),
-             cantRegistros   = Right(Replicate('0', 7) + Ltrim(Rtrim(cantRegistros)),   7),
-             importeTotal    = Right(Replicate('0', 7) + Ltrim(Rtrim(importeTotal)),    7);
+   Insert Into #TempSumario
+  (numeroSecuencia, codigoOperacion, cantRegistros, importeTotal)
+   Select Cast( @w_registros + 1 As Varchar),  @w_codigoNomina, Cast(@w_registros as Varchar),
+   Convert(Varchar, Convert(Money, @w_total_importe))
 
-      Update #TempSumario
-      Set    linea = tipoRegistro + numeroSecuencia + codigoOperacion + cantRegistros +
-                     importeTotal + filler1;
-
-      Set @w_sql = 'Insert Into ' + @w_tablaProc +
-                   '(linea)' +
-                   'Select Linea ' +
-                   'From   #TempSumario'
-     Execute (@w_sql)
-
-   End Try
-
-   Begin Catch
-      Select  @w_Error      = Error_number(),
-              @w_linea      = Error_line(),
-              @w_desc_error = Substring (Error_Message(), 1, 230)
-   End   Catch
-
-   If IsNull(@w_Error, 0) <> 0
+   Set @w_error     = @@Error
+   If @w_error != 0
       Begin
          Select @PnEstatus = @w_error,
-                @PsMensaje = 'Error.: ' + Rtrim(@w_desc_error) + ' en linea ' + Cast(@w_linea as Varchar);
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
 
-         Set Xact_Abort         Off
-         Raiserror (@PsMensaje, 16, 1)
-         Return
-      End;
+      End
+
+   Update #TempSumario
+   Set    importeTotal = Substring(importeTotal, 1, Patindex('%.%', importeTotal) - 1);
+
+   Set @w_error     = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+
+      End
+
+   Update #TempSumario
+   Set    numeroSecuencia = Right(Replicate('0',  7) + Ltrim(Rtrim(numeroSecuencia)),  7),
+          cantRegistros   = Right(Replicate('0',  7) + Ltrim(Rtrim(cantRegistros)),    7),
+          importeTotal    = Right(Replicate('0', 18) + Ltrim(Rtrim(importeTotal)),    18);
+
+   Set @w_error     = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+
+      End
+
+   Update #TempSumario
+   Set    linea = tipoRegistro + numeroSecuencia + codigoOperacion + cantRegistros +
+                  importeTotal + filler1;
+
+   Set @w_error     = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+
+      End
+
+   Insert Into dbo.BB_DispersionTbl
+  (idSession, linea)
+   Select @PsIdSession, Linea
+   From   #TempSumario;
+
+   Set @w_error     = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+
+      End
 
 --
 -- Salida como Archivo Txt
@@ -679,36 +732,35 @@ Begin
 
    If @PbSalida = 1
       Begin
-         Set @w_sql = 'Select Linea '                          +
-                      'From ' + @w_dbname + '.dbo.' + @w_tablaProc + ' ' +
+         Set @w_sql = 'Select Linea '                                 +
+                      'From ' + @w_dbname  + '.dbo.BB_DispersionTbl ' +
+                      'Where idSession = ' + @w_comilla + @PsIdSession  + @w_comilla + ' ' +
                       'Order by secuencia'
 
          Set @w_sql = 'bcp "' + @w_sql + '" queryout "' + @w_rutaCompleta + '" -o ' + @w_log + ' -c -t -T -S' + @w_server
 
-         Begin Try
-            Execute  master..xp_cmdshell @w_sql
-         End  Try
+         Execute  master..xp_cmdshell @w_sql
 
-         Begin Catch
-            Select  @w_Error      = @@Error,
-                    @w_desc_error = 'Error.: ' +  Substring (Error_Message(), 1, 230)
-
-         End   Catch
-
-         If Isnull(@w_Error, 0) <> 0
+         Set @w_error     = @@Error
+         If @w_error != 0
             Begin
-               Select @PnEstatus = @w_Error,
-                      @PsMensaje = 'Error.: ' + Rtrim(Ltrim(Cast(@w_Error As Varchar))) + ' ' + @w_desc_error
+               Select @PnEstatus = @w_error,
+                      @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+               Goto Salida;
 
             End
-      End
-   Else
-      Begin
-         Set @w_sql = 'Select Linea '                        +
-                      'From ' + '.dbo.' + @w_tablaProc + ' ' +
-                      'Order by secuencia'
-        Execute (@w_sql)
-     End;
+
+         Execute dbo.sp_baja_BB_DispersionTbl @PsIdSession     = @PsIdSession,
+                                              @PnEstatus       = @PnEstatus Output,
+                                              @PsMensaje       = @PsMensaje Output;
+
+         If @PnEstatus != 0
+            Begin
+               Goto Salida
+            End
+
+      End;
+
 
 Salida:
 
@@ -727,30 +779,6 @@ Salida:
          Drop Table #TempSumario;
       End
 
-    Begin Try
-       If Exists (Select Top 1 1
-                  From   Sys.tables
-                  Where  name = @w_tablaProc)
-          Begin
-             Set @w_sql = 'Drop Table ' + @w_tablaProc
-             Execute (@w_sql)
-         End
-   End Try
-
-   Begin Catch
-      Select  @w_Error      = Error_number(),
-              @w_linea      = Error_line(),
-              @w_desc_error = Substring (Error_Message(), 1, 230)
-   End   Catch
-
-   If IsNull(@w_Error, 0) <> 0
-      Begin
-         Select @PnEstatus = @w_error,
-                @PsMensaje = 'Error.: ' + Rtrim(@w_desc_error) + ' en linea ' + Cast(@w_linea as Varchar);
-
-         Goto Salida
-      End;
-
    Set Xact_Abort         Off
    Return
 
@@ -764,34 +792,34 @@ Go
 -- Comentarios.
 --
 
-Declare
-   @w_valor          Varchar(1500) = 'Procedimiento que que genera el layout de dispersión Banco Bajio.',
-   @w_procedimiento  Varchar( 100) = 'Spp_genLayoutBajio',
-   @w_tipo           Varchar(  20) = 'Procedure';
+-- Declare
+   -- @w_valor          Varchar(1500) = 'Procedimiento que que genera el layout de dispersión Banco Bajio.',
+   -- @w_procedimiento  Varchar( 100) = 'Spp_genLayoutBajio',
+   -- @w_tipo           Varchar(  20) = 'Procedure';
 
-If Not Exists (Select Top 1 1
-               From   sys.extended_properties a
-               Join   sysobjects  b
-               On     b.xtype   = 'P'
-               And    b.name    = @w_procedimiento
-               And    b.id      = a.major_id)
+-- If Not Exists (Select Top 1 1
+               -- From   sys.extended_properties a
+               -- Join   sysobjects  b
+               -- On     b.xtype   = 'P'
+               -- And    b.name    = @w_procedimiento
+               -- And    b.id      = a.major_id)
 
-   Begin
-      Execute  sp_addextendedproperty @name       = N'MS_Description',
-                                      @value      = @w_valor,
-                                      @level0type = 'Schema',
-                                      @level0name = N'Dbo',
-                                      @level1type = @w_tipo,
-                                      @level1name = @w_procedimiento;
+   -- Begin
+      -- Execute  sp_addextendedproperty @name       = N'MS_Description',
+                                      -- @value      = @w_valor,
+                                      -- @level0type = 'Schema',
+                                      -- @level0name = N'Dbo',
+                                      -- @level1type = @w_tipo,
+                                      -- @level1name = @w_procedimiento;
 
-   End
-Else
-   Begin
-      Execute sp_updateextendedproperty @name       = 'MS_Description',
-                                        @value      = @w_valor,
-                                        @level0type = 'Schema',
-                                        @level0name = N'Dbo',
-                                        @level1type = @w_tipo,
-                                        @level1name = @w_procedimiento
-   End
-Go
+   -- End
+-- Else
+   -- Begin
+      -- Execute sp_updateextendedproperty @name       = 'MS_Description',
+                                        -- @value      = @w_valor,
+                                        -- @level0type = 'Schema',
+                                        -- @level0name = N'Dbo',
+                                        -- @level1type = @w_tipo,
+                                        -- @level1name = @w_procedimiento
+   -- End
+-- Go

@@ -39,7 +39,9 @@ Begin
    Union
    Select 'BCOBAJIO', 12, '98'                               -- Código de Identificador de Banco Bajío (Tarjeta).
    Union
-   Select 'BCOBAJIO', 13, 'C:\TempAdam\BBAJIOCIAIDCAL.txt'    -- Dirección de Alojamiento y Nombre del Archivo de Dispersion Banco Bajio.
+   Select 'BCOBAJIO', 13, 'C:\TempAdam\BBAJIOCIAIDCAL.txt'   -- Dirección de Alojamiento y Nombre del Archivo de Dispersion Banco Bajio.
+   Union
+   Select 'BCOBAJIO', 14, 'BBDISP01'                          -- Código de Operación de la Pantalla de Dispersión Banco Bajío.
    Union
    Select 'SalBAJIO', 0, 'Salida Repuesta a Procedimiento'   -- Identificador del Archivo de Altas.
    Union

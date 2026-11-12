@@ -3,29 +3,29 @@ Go
 
 
 /*
-Declare
-   @PsCompania            Char(     4)    = '1',
-   @PbSalida              Bit             = 1,
-   @PbActualiza           Bit             = 0,
-   @PnEstatus             Integer         = 0,
-   @PsMensaje             Varchar(250)    = Null;
-Begin
+-- Declare
+   -- @PsCompania            Char(     4)    = '1',
+   -- @PbSalida              Bit             = 1,
+   -- @PbActualiza           Bit             = 0,
+   -- @PnEstatus             Integer         = 0,
+   -- @PsMensaje             Varchar(512)    = Null;
+-- Begin
 
-   Execute dbo.Spp_BB_empleados @PsCompania   = @PsCompania,
-                                @PbActualiza  = @PbActualiza,
-                                @PbSalida     = @PbSalida,
-                                @PnEstatus    = @PnEstatus Output,
-                                @PsMensaje    = @PsMensaje Output;
+   -- Execute dbo.Spp_BB_empleados @PsCompania   = @PsCompania,
+                                -- @PbActualiza  = @PbActualiza,
+                                -- @PbSalida     = @PbSalida,
+                                -- @PnEstatus    = @PnEstatus Output,
+                                -- @PsMensaje    = @PsMensaje Output;
 
-   If @PnEstatus != 0
-      Begin
-         Select @PnEstatus  IdError, @PsMensaje MensajeError;
-     End
+   -- If @PnEstatus != 0
+      -- Begin
+         -- Select @PnEstatus  IdError, @PsMensaje MensajeError;
+     -- End
 
-   Return;
+   -- Return;
 
-End;
-Go
+-- End;
+-- Go
 */
 
 If Exists ( Select Top 1 1
@@ -43,7 +43,7 @@ Create Procedure dbo.Spp_BB_empleados
    @PbActualiza           Bit             = 0,
    @PbSalida              Tinyint         = 0,                          -- 0 = 1 = Archivo Texto en DD,
    @PnEstatus             Integer         = 0    Output,
-   @PsMensaje             Varchar(250)    = Null Output)
+   @PsMensaje             Varchar(512)    = Null Output)
 As
 
 Declare
@@ -68,7 +68,11 @@ Declare
    @w_sucursal            Char(       7),
    @w_operacion           Char(       8),
    @w_usuario             Char(      30),
-   @w_indice_inf_soc      Char(10),
+   @w_cuenta_deposito     Char(      40),
+   @w_tarjeta             Char(      40),
+   @w_indice_inf_soc      Char(      10),
+   @w_trabajador          Char(      10),
+   @w_idEstatus           Tinyint,
    @w_server              Sysname,
    @w_dbname              Sysname;
 
@@ -282,7 +286,7 @@ Begin
          Raiserror (@PsMensaje, 16, 1)
          Return
       End
-      
+
    If Not Exists ( Select Top 1 1
                    From   dbo.ins_depositos
                    Where  institucion_deposito = @w_inst_tarjeta)
@@ -307,7 +311,7 @@ Begin
          Raiserror (@PsMensaje, 16, 1)
          Return
       End
-      
+
 
    If @PbSalida = 1
       Begin
@@ -324,6 +328,7 @@ Begin
                Set Xact_Abort         On
                Raiserror (@PsMensaje, 16, 1)
             End
+
         Set @w_log = Replace(@w_rutaCompleta, '.txt', '.log')
 
       End
@@ -462,121 +467,148 @@ Begin
 -- Linea detalle.
 --
 
-   Begin Try
-      Insert Into #TempDetalle
-     (trabajador,      numcuenta,       tarjeta,    nombreCorto,
-      primerNombre,    segundoNombre,
-      apellidoPaterno, apellidoMaterno, sexo,         fechaNacimiento,
-      RFC,             CURP,            calleNumero,  coloniaPoblacion,
-      municipio,       estado,          localidad,    codigoPostal,
-      claveLada,       telefonoCasa,    correo,       estadoCivil)
-      Select a.trabajador, Substring(a.cuenta_deposito, 1, 20), a.tarjeta,
-             Substring(dbo.fn_detallaNombre(b.nombre, 6), 1, 24),
-             Substring(dbo.fn_detallaNombre(b.nombre, 4), 1, 19),
-             Substring(dbo.fn_detallaNombre(b.nombre, 5), 1, 25),
-             Substring(dbo.fn_detallaNombre(b.nombre, 1), 1, 25),
-             Substring(dbo.fn_detallaNombre(b.nombre, 2), 1, 30),
-             Substring(dbo.Fn_BuscaDescripcionCriterio('sexo', b.sexo), 1, 9),
-             Replace(Convert(Char(11), b.fecha_nacimiento, 102), '.', ''),
-             b.registro_fiscal, b.clave_unica,
-             Isnull(Substring(rtrim(ltrim(b.domicilio)),  1, 35), Char(32)),
-             Isnull(Substring(rtrim(ltrim(b.domicilio2)), 1, 35), Char(32)),
-             Isnull(Substring(rtrim(ltrim(b.domicilio3)), 1, 35), Char(32)),
-             Isnull(Substring(Replicate('0', 4 - len(dbo.Fn_BuscaCodigoEstado('MEX', 'b.estado_provincia'))) +
-                                  dbo.Fn_BuscaCodigoEstado('MEX', 'b.estado_provincia'), 1, 4), '0000'),
-             Replicate('0', 8 - len(dbo.Fn_BuscaCodigoLocalidad(dbo.Fn_BuscaCodigoEstado('MEX', 'b.estado_provincia') , b.poblacion))) +
-                           ltrim(dbo.Fn_BuscaCodigoLocalidad(dbo.Fn_BuscaCodigoEstado('MEX', 'b.estado_provincia') , b.poblacion)),
-             Isnull((Select Replicate('0', 5 - len(Isnull(codigo_postal, ''))) + Isnull(Ltrim(rtrim(codigo_postal)), '')
-                     From   dbo.trabajadores
-                     Where  trabajador = a.trabajador
-                     And    Isnull(codigo_postal, '') != ''
-                     And    Isnumeric(codigo_postal)   = 1), '00000'),
-             Isnull(Replicate('0', 3 - Len(dbo.Fn_BuscaClaveLada(a.trabajador)))  + dbo.Fn_BuscaClaveLada(a.trabajador), '000'),
-             Isnull(Replicate('0', 7 - Len(Substring(telefono_particular, 4, 7))) + Substring(telefono_particular, 4, 7), '0000000'),
-             Substring(Isnull(e_mail, ' '), 1, 30),
-             Substring(dbo.Fn_BuscaEdoCivil(a.compania, a.trabajador), 1, 1)
-      From   dbo.BB_AltasEmpleadosTbl a
-      Join   dbo.trabajadores         b
-      On     b.trabajador     = a.trabajador
-      Join   dbo.trabajadores_grales  c
-      On     c.compania       = a.compania
-      And    c.trabajador     = a.trabajador
-      Where  a.compania       = @PsCompania
-      And    a.idEstatus      = 0
-      And    c.sit_trabajador = 1;
+   Insert Into #TempDetalle
+  (trabajador,      numcuenta,       tarjeta,    nombreCorto,
+   primerNombre,    segundoNombre,
+   apellidoPaterno, apellidoMaterno, sexo,         fechaNacimiento,
+   RFC,             CURP,            calleNumero,  coloniaPoblacion,
+   municipio,       estado,          localidad,    codigoPostal,
+   claveLada,       telefonoCasa,    correo,       estadoCivil)
+   Select a.trabajador, Substring(a.cuenta_deposito, 1, 20), a.tarjeta,
+          Substring(dbo.fn_detallaNombre(b.nombre, 6), 1, 24),
+          Substring(dbo.fn_detallaNombre(b.nombre, 4), 1, 19),
+          Substring(dbo.fn_detallaNombre(b.nombre, 5), 1, 25),
+          Substring(dbo.fn_detallaNombre(b.nombre, 1), 1, 25),
+          Substring(dbo.fn_detallaNombre(b.nombre, 2), 1, 30),
+          Substring(dbo.Fn_BuscaDescripcionCriterio('sexo', b.sexo), 1, 9),
+          Replace(Convert(Char(11), b.fecha_nacimiento, 102), '.', ''),
+          b.registro_fiscal, b.clave_unica,
+          Isnull(Substring(rtrim(ltrim(b.domicilio)),  1, 35), Char(32)),
+          Isnull(Substring(rtrim(ltrim(b.domicilio2)), 1, 35), Char(32)),
+          Isnull(Substring(rtrim(ltrim(b.domicilio3)), 1, 35), Char(32)),
+          Isnull(Substring(Replicate('0', 4 - len(dbo.Fn_BuscaCodigoEstado('MEX', 'b.estado_provincia'))) +
+                               dbo.Fn_BuscaCodigoEstado('MEX', 'b.estado_provincia'), 1, 4), '0000'),
+          Replicate('0', 8 - len(dbo.Fn_BuscaCodigoLocalidad(dbo.Fn_BuscaCodigoEstado('MEX', 'b.estado_provincia') , b.poblacion))) +
+                        ltrim(dbo.Fn_BuscaCodigoLocalidad(dbo.Fn_BuscaCodigoEstado('MEX', 'b.estado_provincia') , b.poblacion)),
+          Isnull((Select Replicate('0', 5 - len(Isnull(codigo_postal, ''))) + Isnull(Ltrim(rtrim(codigo_postal)), '')
+                  From   dbo.trabajadores
+                  Where  trabajador = a.trabajador
+                  And    Isnull(codigo_postal, '') != ''
+                  And    Isnumeric(codigo_postal)   = 1), '00000'),
+          Isnull(Replicate('0', 3 - Len(dbo.Fn_BuscaClaveLada(a.trabajador)))  + dbo.Fn_BuscaClaveLada(a.trabajador), '000'),
+          Isnull(Replicate('0', 7 - Len(Substring(telefono_particular, 4, 7))) + Substring(telefono_particular, 4, 7), '0000000'),
+          Substring(Isnull(e_mail, ' '), 1, 30),
+          Substring(dbo.Fn_BuscaEdoCivil(a.compania, a.trabajador), 1, 1)
+   From   dbo.BB_AltasEmpleadosTbl a
+   Join   dbo.trabajadores         b
+   On     b.trabajador     = a.trabajador
+   Join   dbo.trabajadores_grales  c
+   On     c.compania       = a.compania
+   And    c.trabajador     = a.trabajador
+   Where  a.compania       = @PsCompania
+   And    a.idEstatus      = 0
+   And    c.sit_trabajador = 1;
+   
+   Set @w_Error = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+   
+      End
+          
+   Update #TempDetalle
+   Set    PNBeneficiario1 = Isnull(dato_07, Char(32)),
+          SNBeneficiario1 = Isnull(dato_08, Char(32)),
+          APBeneficiario1 = Isnull(dato_01, Char(32)),
+          AMBeneficiario1 = Isnull(dato_02, Char(32)),
+          parentesco1     = Isnull(dato_03, Char(32)),
+          porcentaje1     = Isnull(Right('0000' + Cast(Cast((b.dato_14 * 10) AS Integer) AS Varchar), 4), '0000')
+   From   #TempDetalle           a
+   Join   dbo.inf_soc_trabajador b
+   On     b.trabajador    = a.trabajador
+   And    b.secuencia     = 1
+   Where  indice_inf_soc  = @w_indice_inf_soc;
+   
+   Set @w_Error = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+   
+      End
 
-     Update #TempDetalle
-     Set    PNBeneficiario1 = Isnull(dato_07, Char(32)),
-            SNBeneficiario1 = Isnull(dato_08, Char(32)),
-            APBeneficiario1 = Isnull(dato_01, Char(32)),
-            AMBeneficiario1 = Isnull(dato_02, Char(32)),
-            parentesco1     = Isnull(dato_03, Char(32)),
-            porcentaje1     = Isnull(Right('0000' + Cast(Cast((b.dato_14 * 10) AS Integer) AS Varchar), 4), '0000')
-     From   #TempDetalle           a
-     Join   dbo.inf_soc_trabajador b
-     On     b.trabajador    = a.trabajador
-     And    b.secuencia     = 1
-     Where  indice_inf_soc  = @w_indice_inf_soc;
+   Update #TempDetalle
+   Set    PNBeneficiario2 = Isnull(dato_07, Char(32)),
+          SNBeneficiario2 = Isnull(dato_08, Char(32)),
+          APBeneficiario2 = Isnull(dato_01, Char(32)),
+          AMBeneficiario2 = Isnull(dato_02, Char(32)),
+          parentesco2     = Isnull(dato_03, Char(32)),
+          porcentaje2     = Isnull(Right('0000' + Cast(Cast((b.dato_14 * 10) AS Integer) AS Varchar), 4), '0000')
+   From   #TempDetalle a
+   Join   dbo.inf_soc_trabajador b
+   On     b.trabajador    = a.trabajador
+   And    b.secuencia     = 2
+   Where  indice_inf_soc  = @w_indice_inf_soc;
 
-     Update #TempDetalle
-     Set    PNBeneficiario2 = Isnull(dato_07, Char(32)),
-            SNBeneficiario2 = Isnull(dato_08, Char(32)),
-            APBeneficiario2 = Isnull(dato_01, Char(32)),
-            AMBeneficiario2 = Isnull(dato_02, Char(32)),
-            parentesco2     = Isnull(dato_03, Char(32)),
-            porcentaje2     = Isnull(Right('0000' + Cast(Cast((b.dato_14 * 10) AS Integer) AS Varchar), 4), '0000')
-     From   #TempDetalle a
-     Join   dbo.inf_soc_trabajador b
-     On     b.trabajador    = a.trabajador
-     And    b.secuencia     = 2
-     Where  indice_inf_soc  = @w_indice_inf_soc;
+   Set @w_Error = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+   
+      End
+         
+   Update #TempDetalle
+   Set    PNBeneficiario3 = Isnull(dato_07, Char(32)),
+          SNBeneficiario3 = Isnull(dato_08, Char(32)),
+          APBeneficiario3 = Isnull(dato_01, Char(32)),
+          AMBeneficiario3 = Isnull(dato_02, Char(32)),
+          parentesco3     = Isnull(dato_03, Char(32)),
+          porcentaje3     = Isnull(Right('0000' + Cast(Cast((b.dato_14 * 10) AS Integer) AS Varchar), 4), '0000')
+   From   #TempDetalle a
+   Join   dbo.inf_soc_trabajador b
+   On     b.trabajador    = a.trabajador
+   And    b.secuencia     = 3
+   Where  indice_inf_soc  = @w_indice_inf_soc;
 
-     Update #TempDetalle
-     Set    PNBeneficiario3 = Isnull(dato_07, Char(32)),
-            SNBeneficiario3 = Isnull(dato_08, Char(32)),
-            APBeneficiario3 = Isnull(dato_01, Char(32)),
-            AMBeneficiario3 = Isnull(dato_02, Char(32)),
-            parentesco3     = Isnull(dato_03, Char(32)),
-            porcentaje3     = Isnull(Right('0000' + Cast(Cast((b.dato_14 * 10) AS Integer) AS Varchar), 4), '0000')
-     From   #TempDetalle a
-     Join   dbo.inf_soc_trabajador b
-     On     b.trabajador    = a.trabajador
-     And    b.secuencia     = 3
-     Where  indice_inf_soc  = @w_indice_inf_soc;
-
+   Set @w_Error = @@Error
+   If @w_error != 0
+      Begin
+         Select @PnEstatus = @w_error,
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+   
+      End
+      
 --
 -- Actualización de la linea a imprimir
 --
 
-     Update  #TempDetalle
-     Set     linea = identificador    + tipoOperacion   + numcuenta       + tipoCuenta      +
-                     tarjeta        + enviar          + nombreCorto     + primerNombre    +
-                     segundoNombre    + apellidoPaterno + apellidoMaterno + sexo            +
-                     fechaNacimiento  + RFC             + CURP            + calleNumero     +
-                     coloniaPoblacion + municipio       + estado          + localidad       +
-                     codigoPostal     + claveLada       + telefonoCasa    + correo          +
-                     estadoCivil      + PNBeneficiario1 + SNBeneficiario1 + APBeneficiario1 +
-                     AMBeneficiario1  + parentesco1     + porcentaje1     + PNBeneficiario2 +
-                     SNBeneficiario2  + APBeneficiario2 + AMBeneficiario2 + parentesco2     +
-                     porcentaje2      + PNBeneficiario3 + SNBeneficiario3 + APBeneficiario3 +
-                     AMBeneficiario3  + parentesco3     + porcentaje3     + celular         +
-                     tipoTarjeta;
-   End Try
-
-   Begin Catch
-      Select  @w_Error      = Error_number(),
-              @w_linea      = Error_line(),
-              @w_desc_error = Substring (Error_Message(), 1, 230)
-   End   Catch
-
-   If IsNull(@w_Error, 0) <> 0
+   Update  #TempDetalle
+   Set     linea = identificador    + tipoOperacion   + numcuenta       + tipoCuenta      +
+                   tarjeta        + enviar          + nombreCorto     + primerNombre    +
+                   segundoNombre    + apellidoPaterno + apellidoMaterno + sexo            +
+                   fechaNacimiento  + RFC             + CURP            + calleNumero     +
+                   coloniaPoblacion + municipio       + estado          + localidad       +
+                   codigoPostal     + claveLada       + telefonoCasa    + correo          +
+                   estadoCivil      + PNBeneficiario1 + SNBeneficiario1 + APBeneficiario1 +
+                   AMBeneficiario1  + parentesco1     + porcentaje1     + PNBeneficiario2 +
+                   SNBeneficiario2  + APBeneficiario2 + AMBeneficiario2 + parentesco2     +
+                   porcentaje2      + PNBeneficiario3 + SNBeneficiario3 + APBeneficiario3 +
+                   AMBeneficiario3  + parentesco3     + porcentaje3     + celular         +
+                   tipoTarjeta;
+   Set @w_Error = @@Error
+   If @w_error != 0
       Begin
          Select @PnEstatus = @w_error,
-                @PsMensaje = 'Error.: ' + Rtrim(@w_desc_error) + ' en linea ' + Cast(@w_linea as Varchar);
-
-         Goto Salida
-      End;
-
+                @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+         Goto Salida;
+   
+      End
 
    Insert Into dbo.TempSalidaBajio
   (linea)
@@ -601,22 +633,17 @@ Begin
 
          Set @w_sql = 'bcp "' + @w_sql + '" queryout "' + @w_rutaCompleta + '" -o ' + @w_log + ' -c -t -T -S' + @w_server
 
-         Begin Try
-            Execute  master..xp_cmdshell @w_sql
-         End  Try
+         Execute  master..xp_cmdshell @w_sql
 
-         Begin Catch
-            Select  @w_Error      = @@Error,
-                    @w_desc_error = 'Error.: ' +  Substring (Error_Message(), 1, 230)
-
-         End   Catch
-
-         If Isnull(@w_Error, 0) <> 0
+         Set @w_Error = @@Error
+         If @w_error != 0
             Begin
-               Select @PnEstatus = @w_Error,
-                      @PsMensaje = 'Error.: ' + Rtrim(Ltrim(Cast(@w_Error As Varchar))) + ' ' + @w_desc_error
+               Select @PnEstatus = @w_error,
+                      @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+               Goto Salida;
 
             End
+
       End
    Else
       Begin
@@ -625,114 +652,143 @@ Begin
          Order  by Secuencia;
      End;
 
-
    If @PbActualiza = 1
       Begin
+         Select @w_secuencia = Min(registro) -1,
+                @w_registros = max(registro)
+         From   dbo.BB_AltasEmpleadosTbl
+         Where  idEstatus = 0;
+
          Begin Tran
-            Begin Try
-               Update dbo.rel_trab_ins_dep
-               Set    ins_dep_principal = 0
-               From   dbo.rel_trab_ins_dep     a
-               Join   dbo.BB_AltasEmpleadosTbl b
-               On     b.compania                        = a.compania
-               And    Rtrim(Ltrim(b.trabajador))        = Rtrim(Ltrim(a.trabajador))
-               Join   dbo.trabajadores_grales c
-               On     c.compania                        = a.Compania
-               And    c.trabajador                      = a.trabajador
-               And    c.sit_trabajador                  = 1
-               Where  b.idEstatus                       = 0
-               And    a.ins_dep_principal               = 1;              
-               
-               Update dbo.rel_trab_ins_dep
-               Set    cuenta_deposito   = b.cuenta_deposito,
-                      ins_dep_principal = 1
-               From   dbo.rel_trab_ins_dep     a
-               Join   dbo.BB_AltasEmpleadosTbl b
-               On     b.compania                 = a.compania
-               And    Rtrim(Ltrim(b.trabajador)) = Rtrim(Ltrim(a.trabajador))
-               And    b.idEstatus                = 0
-               Join   dbo.trabajadores_grales  c
-               On     c.compania                 = a.Compania
-               And    c.trabajador               = a.trabajador
-               And    c.sit_trabajador           = 1
-               Where  a.institucion_deposito     = @w_inst_deposito
-            
-               Insert Into dbo.rel_trab_ins_dep
-               (compania,         trabajador, institucion_deposito, cuenta_deposito,
-                ins_dep_principal)
-               Select a.compania, a.trabajador, @w_inst_deposito, a.cuenta_deposito,
-                      1
-               From   dbo.BB_AltasEmpleadosTbl a
-               Join   dbo.trabajadores_grales  b
-               On     b.compania                 = a.Compania
-               And    Rtrim(Ltrim(b.trabajador)) = Rtrim(Ltrim(a.trabajador))
-               And    b.sit_trabajador           = 1
-               Where  a.idEstatus                = 0
-               And    Not Exists                 ( Select Top 1 1
-                                                   From   dbo.rel_trab_ins_dep
-                                                   Where  compania                 = a.compania
-                                                   And    Rtrim(Ltrim(trabajador)) = Rtrim(Ltrim(a.trabajador))
-                                                   And    institucion_deposito     = @w_inst_deposito);
+
+            While @w_secuencia < @w_registros
+            Begin
+               Set @w_secuencia = @w_secuencia + 1;
+
+               Select @w_trabajador      = dbo.fn_formato_trabajador(@w_trabajador),
+                      @w_idEstatus       = idEstatus,
+                      @w_cuenta_deposito = cuenta_deposito,
+                      @w_tarjeta         = Case When Isnull(tarjeta, '0') = '0'
+                                                Then Replicate('0', 16)
+                                                When Ltrim(Rtrim(tarjeta)) = ''
+                                                Then Replicate('0', 16)
+                                                Else tarjeta
+                                           End
+               From   dbo.BB_AltasEmpleadosTbl
+               Where  registro = @w_secuencia;
+               If @@Rowcount = 0
+                  Begin
+                     Set @w_idEstatus = 9;
+                  End
+
+               If  @w_idestatus = 0
+                   Begin
+                      Update dbo.rel_trab_ins_dep
+                      Set    ins_dep_principal = 0
+                      Where  compania             = @PsCompania
+                      And    trabajador           = @w_trabajador;
+                      Set @w_Error = @@Error
+                      If @w_error != 0
+                         Begin
+                            Rollback Tran
+                            Select @PnEstatus = @w_error,
+                                   @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+                            Break;
+
+                         End
+
+                      If Exists ( Select Top 1 1
+                                  From   dbo.rel_trab_ins_dep
+                                  Where  compania             = @PsCompania
+                                  And    trabajador           = @w_trabajador
+                                  And    institucion_deposito = @w_inst_deposito)
+                         Begin
+                            Update dbo.rel_trab_ins_dep
+                            Set    cuenta_deposito   = @w_cuenta_deposito,
+                                   ins_dep_principal = 1
+                            Where  compania             = @PsCompania
+                            And    trabajador           = @w_trabajador
+                            And    institucion_deposito = @w_inst_deposito;
+                         End
+                      Else
+                         Begin
+                            Insert Into dbo.rel_trab_ins_dep
+                           (compania, trabajador, institucion_deposito, cuenta_deposito,
+                            ins_dep_principal)
+                            Select @PsCompania, @w_trabajador, @w_inst_deposito, @w_cuenta_deposito,
+                                  1
+                         End
+
+                      Set @w_Error = @@Error
+                         If @w_error != 0
+                            Begin
+                               Rollback Tran
+                               Select @PnEstatus = @w_error,
+                                      @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+                               Break;
+
+                            End
+
 --
 -- Actualización Datos de tarjeta
 --
-               Update dbo.rel_trab_ins_dep
-               Set    cuenta_deposito   = b.tarjeta
-               From   dbo.rel_trab_ins_dep     a
-               Join   dbo.BB_AltasEmpleadosTbl b
-               On     b.compania                 = a.compania
-               And    Rtrim(Ltrim(b.trabajador)) = Rtrim(Ltrim(a.trabajador))
-               And    b.idEstatus                = 0
-               Join   dbo.trabajadores_grales  c
-               On     c.compania                 = a.Compania
-               And    c.trabajador               = a.trabajador
-               And    c.sit_trabajador           = 1
-               Where  a.institucion_deposito     = @w_inst_tarjeta
-            
-               Insert Into dbo.rel_trab_ins_dep
-               (compania,         trabajador, institucion_deposito, cuenta_deposito,
-                ins_dep_principal)
-               Select a.compania, a.trabajador, @w_inst_tarjeta, a.tarjeta,
-                      0
-               From   dbo.BB_AltasEmpleadosTbl a
-               Join   dbo.trabajadores_grales  b
-               On     b.compania                 = a.Compania
-               And    Rtrim(Ltrim(b.trabajador)) = Rtrim(Ltrim(a.trabajador))
-               And    b.sit_trabajador           = 1
-               Where  a.idEstatus                = 0
-               And    Not Exists                 ( Select Top 1 1
-                                                   From   dbo.rel_trab_ins_dep
-                                                   Where  compania                 = a.compania
-                                                   And    Rtrim(Ltrim(trabajador)) = Rtrim(Ltrim(a.trabajador))
-                                                   And    institucion_deposito     = @w_inst_tarjeta);
+
+                      If Exists ( Select Top 1 1
+                                  From   dbo.rel_trab_ins_dep
+                                  Where  compania             = @PsCompania
+                                  And    trabajador           = @w_trabajador
+                                  And    institucion_deposito = @w_inst_tarjeta)
+                         Begin
+                            Update dbo.rel_trab_ins_dep
+                            Set    cuenta_deposito   = @w_tarjeta,
+                                   ins_dep_principal = 0
+                            Where  compania             = @PsCompania
+                            And    trabajador           = @w_trabajador
+                            And    institucion_deposito = @w_inst_tarjeta;
+                         End
+                      Else
+                         Begin
+                            Insert Into dbo.rel_trab_ins_dep
+                           (compania, trabajador, institucion_deposito, cuenta_deposito,
+                            ins_dep_principal)
+                            Select @PsCompania, @w_trabajador, @w_inst_tarjeta, @w_tarjeta,
+                            0
+                         End
+
+                      Set @w_Error = @@Error;
+                      If @w_error != 0
+                         Begin
+                            Rollback Tran
+                            Select @PnEstatus = @w_error,
+                                   @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+                            Break;
+                      
+                         End
 --
-               
-               Update dbo.BB_AltasEmpleadosTbl
-               Set    idEstatus     = 1,
-                      fechaProceso  = Getdate()
-               From   dbo.BB_AltasEmpleadosTbl a
-               Where  a.idEstatus   = 0
-               And    Exists      ( Select Top 1 1
-                                    From   dbo.rel_trab_ins_dep
-                                    Where  compania                 = a.compania
-                                    And    Rtrim(Ltrim(trabajador)) = Rtrim(Ltrim(a.trabajador))
-                                    And    institucion_deposito     = @w_inst_deposito
-                                    And    cuenta_deposito          = a.cuenta_deposito);
-            End try
+-- Actualización Entidad de Control
+--
 
-            Begin Catch
-               Select  @w_Error      = Error_number(),
-                       @w_linea      = Error_line(),
-                       @w_desc_error = Substring (Error_Message(), 1, 230)
-            End   Catch
+                      Update dbo.BB_AltasEmpleadosTbl
+                      Set    idEstatus     = 1,
+                             fechaProceso  = Getdate()
+                      Where  registro = @w_secuencia;
+                      
+                      Set @w_Error = @@Error
+                      If @w_error != 0
+                         Begin
+                            Rollback Tran
+                            Select @PnEstatus = @w_error,
+                                   @PsMensaje = dbo.fn_ConsultaSysmessages(@w_error)
+                            Break;
+                      
+                         End
 
-            If IsNull(@w_Error, 0) <> 0
-               Begin
-                  Select @PnEstatus = @w_error,
-                         @PsMensaje = 'Error.: ' + Rtrim(@w_desc_error) + ' en linea ' + Cast(@w_linea as Varchar);
+                   End -- If  @w_estatus = 0
 
-                  Rollback
-                  Goto Salida
+                   If @w_error != 0
+                      Begin
+                         Goto Salida
+                      End
                End;
 
          Commit Tran;

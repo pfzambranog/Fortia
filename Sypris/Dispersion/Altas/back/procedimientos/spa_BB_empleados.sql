@@ -2,33 +2,33 @@ Use Adam
 Go
 
 
-/*
-Declare
-   @PsCompania            Char(     4)    = '1',
-   @PsTrabajador          Char(    10)    = '6',
-   @PsCuenta_deposito     Char(    20)    = '1019258462'
-   @PsTarjeta             Char(    16)    = Null,
-   @PnEstatus             Integer         = 0,
-   @PsMensaje             Varchar(250)    = Null;
-Begin
+-- /*
+-- Declare
+   -- @PsCompania            Char(     4)    = '1',
+   -- @PsTrabajador          Char(    10)    = '6',
+   -- @PsCuenta_deposito     Char(    20)    = '1019258462'
+   -- @PsTarjeta             Char(    16)    = Null,
+   -- @PnEstatus             Integer         = 0,
+   -- @PsMensaje             Varchar(250)    = Null;
+-- Begin
 
-   Execute dbo.Spa_BB_empleados @PsCompania        = @PsCompania,
-                                @PsTrabajador      = @PsTrabajador,
-                                @PsCuenta_deposito = @PsCuenta_deposito,
-                                @PsTarjeta         = @PsTarjeta,
-                                @PnEstatus         = @PnEstatus Output,
-                                @PsMensaje         = @PsMensaje Output;
+   -- Execute dbo.Spa_BB_empleados @PsCompania        = @PsCompania,
+                                -- @PsTrabajador      = @PsTrabajador,
+                                -- @PsCuenta_deposito = @PsCuenta_deposito,
+                                -- @PsTarjeta         = @PsTarjeta,
+                                -- @PnEstatus         = @PnEstatus Output,
+                                -- @PsMensaje         = @PsMensaje Output;
 
-   If @PnEstatus != 0
-      Begin
-         Select @PnEstatus  IdError, @PsMensaje MensajeError;
-     End
+   -- If @PnEstatus != 0
+      -- Begin
+         -- Select @PnEstatus  IdError, @PsMensaje MensajeError;
+     -- End
 
-   Return;
+   -- Return;
 
-End;
-Go
-*/
+-- End;
+-- Go
+-- */
 
 If Exists ( Select Top 1 1
             From   sysobjects
@@ -118,7 +118,7 @@ Begin
          Return
       End
 
-   Begin Try
+   -- Begin Try
       Select @w_registro = registro
       From   dbo.BB_AltasEmpleadosTbl
       Where  compania                 = @PsCompania
@@ -143,23 +143,23 @@ Begin
             Where  registro        = @w_registro;
         End
 
-   End Try
+   -- End Try
 
-   Begin Catch
-      Select  @w_Error      = Error_number(),
-              @w_linea      = Error_line(),
-              @w_desc_error = Substring (Error_Message(), 1, 230)
-   End   Catch
+   -- Begin Catch
+      -- Select  @w_Error      = Error_number(),
+              -- @w_linea      = Error_line(),
+              -- @w_desc_error = Substring (Error_Message(), 1, 230)
+   -- End   Catch
 
-   If IsNull(@w_Error, 0) <> 0
-      Begin
-         Select @PnEstatus = @w_error,
-                @PsMensaje = 'Error.: ' + Rtrim(@w_desc_error) + ' en linea ' + Cast(@w_linea as Varchar);
+   -- If IsNull(@w_Error, 0) <> 0
+      -- Begin
+         -- Select @PnEstatus = @w_error,
+                -- @PsMensaje = 'Error.: ' + Rtrim(@w_desc_error) + ' en linea ' + Cast(@w_linea as Varchar);
 
-         Set Xact_Abort         On
-         Return
+         -- Set Xact_Abort         On
+         -- Return
 
-      End;
+      -- End;
 
    If Len(@PsTarjeta) != 16
       Begin
@@ -355,35 +355,35 @@ Go
 -- Comentarios.
 --
 
-Declare
-   @w_valor          Varchar(1500) = 'Procedimiento que que genera archivo txt de alta empleados Banco Bajio.',
-   @w_procedimiento  Varchar( 100) = 'Spa_BB_empleados',
-   @w_tipo           Varchar(  20) = 'Procedure';
+-- Declare
+   -- @w_valor          Varchar(1500) = 'Procedimiento que que genera archivo txt de alta empleados Banco Bajio.',
+   -- @w_procedimiento  Varchar( 100) = 'Spa_BB_empleados',
+   -- @w_tipo           Varchar(  20) = 'Procedure';
 
-If Not Exists (Select Top 1 1
-               From   sys.extended_properties a
-               Join   sysobjects  b
-               On     b.xtype   = 'P'
-               And    b.name    = @w_procedimiento
-               And    b.id      = a.major_id)
+-- If Not Exists (Select Top 1 1
+               -- From   sys.extended_properties a
+               -- Join   sysobjects  b
+               -- On     b.xtype   = 'P'
+               -- And    b.name    = @w_procedimiento
+               -- And    b.id      = a.major_id)
 
-   Begin
-      Execute  sp_addextendedproperty @name       = N'MS_Description',
-                                      @value      = @w_valor,
-                                      @level0type = 'Schema',
-                                      @level0name = N'Dbo',
-                                      @level1type = @w_tipo,
-                                      @level1name = @w_procedimiento;
+   -- Begin
+      -- Execute  sp_addextendedproperty @name       = N'MS_Description',
+                                      -- @value      = @w_valor,
+                                      -- @level0type = 'Schema',
+                                      -- @level0name = N'Dbo',
+                                      -- @level1type = @w_tipo,
+                                      -- @level1name = @w_procedimiento;
 
-   End
-Else
-   Begin
-      Execute sp_updateextendedproperty @name       = 'MS_Description',
-                                        @value      = @w_valor,
-                                        @level0type = 'Schema',
-                                        @level0name = N'Dbo',
-                                        @level1type = @w_tipo,
-                                        @level1name = @w_procedimiento
-   End
-Go
+   -- End
+-- Else
+   -- Begin
+      -- Execute sp_updateextendedproperty @name       = 'MS_Description',
+                                        -- @value      = @w_valor,
+                                        -- @level0type = 'Schema',
+                                        -- @level0name = N'Dbo',
+                                        -- @level1type = @w_tipo,
+                                        -- @level1name = @w_procedimiento
+   -- End
+-- Go
 
