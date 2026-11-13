@@ -27,6 +27,7 @@ Global glRuta             As String
 Global glIdCalendario     As Integer
 Global gSession           As String
 Global glTipoNomina       As String
+Global gValida            As Boolean
 
 
 Public Declare Function GetPrivateProfileString Lib "kernel32" Alias "GetPrivateProfileStringA" ( _

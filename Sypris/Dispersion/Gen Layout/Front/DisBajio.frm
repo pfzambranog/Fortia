@@ -247,13 +247,12 @@ Private Sub Form_Load()
     CmbTipoNomina.Enabled = True
     CmbAnio.Enabled = False
     CmbPeriodo.Enabled = False
-
+    gValida = True
     Call carga_Parametros
 
     Me.Show
 
 End Sub
-
 Private Sub carga_Parametros()
 
     Dim cod As String
@@ -267,7 +266,7 @@ Private Sub carga_Parametros()
     gSql = "Select descripcion " & _
            "From dbo.criterios_valores " & _
            "Where campo = 'BCOBAJIO' " & _
-           "And item = 14"
+           "And   item  = 14"
 
     If Not fEjecuta(2, gSql) Then
         MsgBox "Error al obtener la operación.", vbExclamation
@@ -280,7 +279,7 @@ Private Sub carga_Parametros()
     gSql = "Select descripcion " & _
            "From dbo.criterios_valores " & _
            "Where campo = 'BCOBAJIO' " & _
-           "And item = 13"
+           "And item    = 13"
 
     If Not fEjecuta(2, gSql) Then
         MsgBox "Error al obtener la ruta.", vbExclamation
@@ -289,6 +288,12 @@ Private Sub carga_Parametros()
 
     glRuta = Trim(MAdo.GetField(1) & "")
 
+    If glRuta = "" Then
+        MsgBox "La ruta configurada para Banco Bajío está vacía.", vbExclamation
+        gValida = False
+        Exit Sub
+    End If
+    
     Call LlenarComboTipoNomina
     
     Exit Sub
@@ -370,22 +375,25 @@ Private Sub BtnEjecutar_Click()
         Exit Sub
     End If
 
-
     Call GeneraArchivoTxt
-   
+    
     gSql = "Execute dbo.sp_baja_BB_DispersionTbl @PsIdSession = '" & gSession & "'"
     
-
-
     If Not fEjecuta(1, gSql) Then
         MsgBox "Advertencia: no fue posible limpiar la tabla temporal.", vbExclamation
     End If
 
-    MsgBox "Proceso completado exitosamente.", vbInformation
+    If gValida = False Then
+       MsgBox "El proceso No se completo Correctamente.", vbInformation
+       Exit Sub
+    End If
+    
+    MsgBox "El proceso termino exitosamente.", vbInformation
 
-    Exit Sub
 
    Call BtnRefrescar_Click
+   
+   Exit Sub
    
 ErrorHandler:
 
@@ -436,7 +444,7 @@ Sub GeneraArchivoTxt()
     gSql = "Select descripcion " & _
            "From dbo.criterios_valores " & _
            "Where campo = 'BCOBAJIO' " & _
-           "And item = 13"
+           "And  item   = 13"
 
     If Not fEjecuta(2, gSql) Then
         MsgBox "Error: No existe el parámetro de Ruta (Item 13)", vbExclamation
@@ -447,13 +455,17 @@ Sub GeneraArchivoTxt()
 
     If vPlantillaRuta = "" Then
         MsgBox "La ruta configurada para Banco Bajío está vacía.", vbExclamation
+        gValida = False
         Exit Sub
     End If
 
+    If Not ValidarRutaSalida(vPlantillaRuta) Then
+       gValida = False
+       Exit Sub
+    End If
 
     vNombreArchivo = Replace(vPlantillaRuta, "CIA", Trim(gCiaCodigo))
     vNombreArchivo = Replace(vNombreArchivo, "IDCAL", Trim(glIdCalendario))
-
 
     vDirectorio = Left(vNombreArchivo, InStrRev(vNombreArchivo, "\") - 1)
 
@@ -782,7 +794,6 @@ Private Sub BtnPdf_Click()
     End If
 
     If MAdo.EOF Then
-
         MsgBox "No existen registros para generar el reporte.", _
                vbExclamation
 
@@ -793,7 +804,12 @@ Private Sub BtnPdf_Click()
     If Not CargarDatosPdf() Then Exit Sub
 
     Call ExportarPdf
-
+    
+    If gValida = False Then
+       MsgBox "Error NO se genero el archivo", vbCritical
+       Exit Sub
+    End If
+    
     Exit Sub
 
 ErrorHandler:
@@ -835,7 +851,6 @@ Private Function ObtenerRutaPdf(ByVal pNombreProcesado As String, _
     End With
 
 End Function
-
 Private Sub ExportarPdf()
 
     Dim xlLibro As Object
@@ -851,13 +866,16 @@ Private Sub ExportarPdf()
 
     On Error GoTo ErrorHandler
 
-    Set xlLibro = GenerarExcelDispersacion( _
-                        xlHoja, _
-                        xlApp, _
-                        ultimaFila)
+    Set xlLibro = GenerarExcelDispersacion(xlHoja, xlApp, ultimaFila)
 
     xlApp.Visible = False
     
+    
+    If Not ValidarRutaSalida(glRuta) Then
+       gValida = False
+       Exit Sub
+
+    End If
 
     vNombreArchivo = Replace( _
                         glRuta, _
@@ -889,7 +907,11 @@ Private Sub ExportarPdf()
 
     If Trim$(rutaPDF) = "" Then GoTo Salida
 
-
+    If Not ValidarRutaSalida(rutaPDF) Then
+       gValida = False
+       Exit Sub
+    End If
+    
     xlHoja.ExportAsFixedFormat _
             Type:=0, _
             FileName:=rutaPDF, _
@@ -994,6 +1016,7 @@ Private Function CargarDatosPdf() As Boolean
 
         grdPdf.TextMatrix(fila, 0) = Trim(MAdo.GetField(7) & "")
         grdPdf.TextMatrix(fila, 1) = Trim(MAdo.GetField(8) & "")
+        
         grdPdf.TextMatrix(fila, 2) = Trim(MAdo.GetField(9) & "")
 
         importe = CCur(Val(MAdo.GetField(10) & ""))
@@ -1091,7 +1114,7 @@ Private Sub ConstruirReporteBajio(ByVal xlHoja As Object, _
     xlHoja.Cells(5, 6) = "Usuario:"
     xlHoja.Cells(6, 6) = "Fecha Generación:"
 
-    xlHoja.Cells(5, 7) = Trim(gUserId)
+    xlHoja.Cells(5, 7) = Trim(UCase(gUserId))
     xlHoja.Cells(6, 7) = Trim(mFechaGeneracion)
 
     xlHoja.Range("F5:F7").Font.Bold = True
@@ -1116,8 +1139,7 @@ Private Sub ConstruirReporteBajio(ByVal xlHoja As Object, _
 
         xlHoja.Cells(fila + i, 1) = grdPdf.TextMatrix(i, 0)
         xlHoja.Cells(fila + i, 2) = grdPdf.TextMatrix(i, 1)
-        xlHoja.Cells(fila + i, 3) = grdPdf.TextMatrix(i, 2)
-
+        xlHoja.Cells(fila + i, 3) = "'" & Trim$(grdPdf.TextMatrix(i, 2))
         xlHoja.Cells(fila + i, 4) = CDbl(Replace( _
                                         grdPdf.TextMatrix(i, 3), _
                                         ",", ""))
@@ -1152,7 +1174,10 @@ Private Sub ConstruirReporteBajio(ByVal xlHoja As Object, _
 
     xlHoja.Range("A11:D11").HorizontalAlignment = -4108
 
+    xlHoja.Columns("C").HorizontalAlignment = -4108
+    
     xlHoja.Columns("D").HorizontalAlignment = -4152
+
 
     With xlHoja.Range("A11:D" & (ultimaFila + 1))
 
@@ -1188,6 +1213,72 @@ Private Sub ConstruirReporteBajio(ByVal xlHoja As Object, _
         .BottomMargin = 20
 
     End With
+
+End Sub
+
+Private Function ValidarRutaSalida(ByVal sArchivo As String) As Boolean
+
+    On Error GoTo ErrorHandler
+
+    Dim sUnidad As String
+    Dim sDirectorio As String
+
+    ValidarRutaSalida = False
+
+    sUnidad = Left$(sArchivo, 3)
+
+    If Dir$(sUnidad, vbDirectory) = "" Then
+
+        MsgBox "La unidad especificada no existe. Validar con Administrador de Adam" & vbCrLf & _
+               "Ruta: " & sArchivo, _
+               vbExclamation, _
+               "Dispersión Bancaria"
+
+        Exit Function
+
+    End If
+
+    sDirectorio = Left$(sArchivo, InStrRev(sArchivo, "\") - 1)
+
+    If Dir$(sDirectorio, vbDirectory) = "" Then
+
+        MkDirRecursivo sDirectorio
+
+    End If
+
+    ValidarRutaSalida = True
+
+    Exit Function
+
+ErrorHandler:
+
+    MsgBox "No fue posible crear el directorio destino." & vbCrLf & _
+           "Ruta: " & sDirectorio & vbCrLf & vbCrLf & _
+           Err.Description, _
+           vbCritical, _
+           "Dispersión Bancaria"
+
+End Function
+
+Private Sub MkDirRecursivo(ByVal sPath As String)
+
+    Dim arrPartes() As String
+    Dim sActual As String
+    Dim i As Long
+
+    arrPartes = Split(sPath, "\")
+
+    sActual = arrPartes(0)
+
+    For i = 1 To UBound(arrPartes)
+
+        sActual = sActual & "\" & arrPartes(i)
+
+        If Dir$(sActual, vbDirectory) = "" Then
+            MkDir sActual
+        End If
+
+    Next i
 
 End Sub
 
